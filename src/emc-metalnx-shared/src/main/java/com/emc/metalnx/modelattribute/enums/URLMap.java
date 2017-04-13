@@ -73,6 +73,8 @@ public class URLMap {
     public static final String URL_RESOURCES_SERVERS = "/resources/servers/";
     public static final String URL_RESOURCES_MAP = "/resources/map/";
     public static final String URL_RESOURCE_VALIDATE_NAME = "/emc-metalnx-web/resources/isValidResourceName/";
+	
+	public static final String URL_RULES_DEPLOYMENT = "/rules/";
 
     public static final String URL_SPECIFIC_QUERIES_MANAGEMENT = "/specificqueries/";
     public static final String URL_ADD_SPECIFIC_QUERY_PAGE = "/specificqueries/add/";
