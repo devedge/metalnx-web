@@ -131,7 +131,7 @@
         </div> <!-- /. Main Boostrap row -->
         
         
-        <!-- Upload Modal -->
+		<!-- Upload Modal -->
 		<div class="modal fade" id="uploadModal" tabindex="-1" role="dialog"
 			aria-labelledby="myModalLabel" aria-hidden="true">
 			<div class="modal-dialog">
@@ -153,7 +153,7 @@
 							</div>
 						</div>
 						<!-- Form submitted as soon as the user selects all files to be uploaded -->
-                        <form action="/emc-metalnx-web/upload/" method="POST"
+                        <form action="/emc-metalnx-web/upload/uploadSimple" method="POST"
                               role="form" enctype="multipart/form-data" id="uploadForm">
 
 							
@@ -173,7 +173,8 @@
 								</div>
 							</div>
 
-							<!-- <div id="uploadControlOptions">
+							<div id="uploadControlOptions">
+								<input type="hidden" id="uploadDestinationPath" value="/tempZone/home/rods/.gnufoldar" />
 								<div class="row form-group">
 									<div class="col-md-6">Resource</div>
 									<div class="col-md-6">
@@ -205,7 +206,7 @@
 									</div>
  								</div>
 
-							</div> -->
+							</div>
 						</form>
 
 					</div>
@@ -232,7 +233,6 @@
 					placement: 'left',
 				});
 				
-				
 				// $('#uploadModal').on('show.bs.modal', function(){
 				// 	$('#uploadForm').each(function(){
 				// 		this.reset();
@@ -245,11 +245,68 @@
 				// 	// Hiding the resource selection box on the upload modal
 				// 	$("#selectResource").prop("disabled", true);
 				// });
+				
+				
+			});
+			
+			function updateResourceForReplicationOptions() {
+	        	$("#selectResource > option").remove();
+    			$("#selectResourceToUpload > option").each(function() {
+    				if(!$(this).is(":selected")) {
+    					$("#selectResource").append($(this).clone());
+    				}	    				
+    			});
+	        }
+			
+			$("#selectResourceToUpload").change(function() {
+	        	updateResourceForReplicationOptions();
+	        });
+			
+			$("#inputReplica").change(function () {
+	        	if($(this).is(":checked")) {	   
+	        		updateResourceForReplicationOptions();	    			
+	                $("#selectResource").prop("disabled", false);
+	            }
+	        	else {
+	                $("#selectResource").prop("disabled", true);        		
+	        	}
 			});
 			
 			$("#browseButton").click(function(){
 				$("input[name='files']").click();
 			});
+			
+			$('.modal').on('hidden.bs.modal', function(e){
+	        	$(".modal a").each(function(){
+					if($(this).attr('onclick') !== undefined){
+						if($(this).attr('onclick').indexOf('retractElement') >= 0){
+							eval($(this).attr('onclick'));
+						}
+					}
+				});
+	        });
+			
+			// function cleanModals() {
+			// 	$(".modal").modal("hide");
+			// 	
+			// 	//reset the modal
+			// 	$(".modal a").each(function(){
+			// 		if($(this).attr('onclick') !== undefined){
+			// 			if($(this).attr('onclick').indexOf('retractElement') >= 0){
+			// 				eval($(this).attr('onclick'));
+			// 			}
+			// 		}
+			// 	});
+	        // }
+			// 
+			// $("#cancelMoveBtn").click(function() {
+	        // 	cleanModals();	        	
+	        // });
+	        // 
+	        // $("#cancelCopyBtn").click(function() {
+	        // 	cleanModals();
+	        // });
+			
 		/*]]>*/
 		</script>
 

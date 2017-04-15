@@ -23,9 +23,15 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
+import com.emc.metalnx.core.domain.exceptions.DataGridException;
 // import org.springframework.web.bind.annotation.RequestParam;
 // import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.context.WebApplicationContext;
+
+import com.emc.metalnx.services.interfaces.*;
+import com.emc.metalnx.core.domain.exceptions.DataGridConnectionRefusedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.emc.metalnx.services.interfaces.IRODSServices;
 import com.emc.metalnx.services.interfaces.UserService;
@@ -40,6 +46,12 @@ public class RulesController {
 
     @Autowired
     IRODSServices irodsServices;
+	
+	@Autowired
+    ResourceService resourceService;
+	
+	
+	private static final Logger logger = LoggerFactory.getLogger(CollectionController.class);
 
     /**
      * Responds to the rules request
@@ -49,7 +61,17 @@ public class RulesController {
      * @return the template with the rules page
      */
     @RequestMapping(value = "/")
-    public String listrules(Model model) {
+    public String listrules(Model model) throws DataGridConnectionRefusedException {
+		
+		try {
+			model.addAttribute("resources", resourceService.findAll());
+			logger.info("ALL DATA RETURNED FROM RESOURCE SERVICE {}", resourceService.findAll());
+			
+		} catch (DataGridException e) {
+			logger.error("Could not respond to request for collections: {}", e);
+            model.addAttribute("unexpectedError", true);
+		}
+		
 
         return "rules/rules";
     }
