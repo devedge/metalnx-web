@@ -39,7 +39,7 @@
                                 <a href="#" id="moveBtn" class="hideElement" data-toggle="modal" data-target="#moveModal">
                                     <span><i class="fa fa-exchange"></i> </span>
                                     <span>Deploy Rule</span>
-                                </a>
+                                </a>	
                             </li>
                             <!-- <li>
                                 <a href="#" id="copyBtn" class="hideElement" data-toggle="modal" data-target="#copyModal">
@@ -162,7 +162,7 @@
 									selected</span>
 							</p>
 							<div class="well">
-								<!-- <div class="col-sm-4 col-sm-offset-4" style="align-items: center; display: flex; min-height: 100%;"> -->
+								<!-- <div class="col-sm-4 col-sm-offset-4" style="align-items: center; display: flex; min-height: 100%;"> -->`
 									<button type="button" class="btn btn-primary btn-sm" id="browseButton" style="margin: 10% auto;">
 										<span th:text="#{select.files.upload}"></span>
 									</button>
@@ -174,7 +174,7 @@
 							</div>
 
 							<div id="uploadControlOptions">
-								<input type="hidden" id="uploadDestinationPath" value="/tempZone/home/rods/.gnufoldar" />
+								<input type="hidden" id="`" value="/tempZone/home/rods/.gnufoldar" />
 								<div class="row form-group">
 									<div class="col-md-6">Resource</div>
 									<div class="col-md-6">
@@ -308,6 +308,66 @@
 	        // });
 			
 		/*]]>*/
+		/**
+		 * JS file used for implementing the bulk upload function.
+		 */
+		var files;
+		var resolvedFileNames = [];
+		var originalPagetitle = $('title').html();
+
+		/**
+		 * Function that checks when the users selects files for upload.
+		 */
+		$("input[name='files']").change(function () {
+			resolvedFileNames = [];
+
+			files = $("input[name='files']").prop("files");
+			$('#numberFilesUpload').html(files.length);
+			$('#browseButton').hide();
+
+			$.each(files, function(index, file){
+				var fileName = resolveFileName(file.name);
+				$("#filesList").append('<p>' + fileName + '</p>');
+				resolvedFileNames.push(fileName);
+
+				console.log("-------> Adding file: " + fileName);
+			});
+
+			$('#uploadControlOptions').show();
+		});
+		
+
+		//--CUSTOM TRANSFER CHANGES HERE --------------------
+		/**
+		 * Handles onclick event when the user clicks on uploading a set of files.
+		 */
+		$("#uploadButton").click(function(){
+			if($("input[name='files']").prop("files").length == 0 ){
+				$('#uploadMinMessage').show();
+				return;
+			}
+
+			$('#uploadModal').modal('hide');
+			
+			uploadAndUpdateStatus(files[0], 0, files.length)
+		});
+
+		function uploadAndUpdateStatus(file, index, totalFiles){
+		    var url = "/emc-metalnx-web/deployNewRule/";
+		    var formData = new FormData();
+		    formData.append('file', file);
+
+		    console.log(file);
+
+		    $.ajax({
+		        url: url,
+		        type: "POST",
+		        data: formData,
+		        cache: false,
+		        contentType: false,
+		        processData: false
+		    });
+		}
 		</script>
 
     </div> <!-- /. Page Content -->

@@ -17,6 +17,8 @@
 package com.emc.metalnx.controller;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.Part;
+import javax.servlet.ServletException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
@@ -87,7 +89,7 @@ public class RulesController {
 		
 		try {
 			model.addAttribute("resources", resourceService.findAll());
-			logger.info("ALL DATA RETURNED FROM RESOURCE SERVICE {}", resourceService.findAll());
+			// logger.info("ALL DATA RETURNED FROM RESOURCE SERVICE {}", resourceService.findAll());
 			
 		} catch (DataGridException e) {
 			logger.error("Could not respond to request for collections: {}", e);
@@ -110,20 +112,22 @@ public class RulesController {
      * @return treeView template that renders all nodes of certain path (parent)
      * @throws DataGridConnectionRefusedException
      */
-    @RequestMapping(value = "/deployNewRule/", method = RequestMethod.POST)
-    public String deployNewRule(Model model, @RequestParam("localpath") String localpath) throws JargonException {
-        // TODO: Code from iRODSPutFileTest.uploadWithFileVerification()
-        logger.info("Local path: {}", localpath);
+    @RequestMapping(value = "deployNewRule/", method = RequestMethod.POST) // TODO: may need to make it /deployNewRule/ with preceding slash.
+    public String deployNewRule(Model model, HttpServletRequest request) throws JargonException, IOException, ServletException { // TODO: Code from iRODSPutFileTest.uploadWithFileVerification()
+        Part filePart = request.getPart("file");
+        String fileName = String.valueOf("fileName");
+        File file = new File(fileName);
+        logger.info("---------------------> File received: {}", fileName);
 
-        String command = "deploy";
-        int index = 0;
-        String host = "sd-vm14.csc.ncsu.edu";
-        String user = "rods";
-        String password = "irods";
+        // String command = "deploy";
+        // int index = 0;
+        // String host = "sd-vm14.csc.ncsu.edu";
+        // String user = "rods";
+        // String password = "irods";
 
-        // for (server : server_list) { trasmit(); }
-        int response = transmit(localpath, command, index, host, user, password);
-        logger.info("Put file response: {}", response);
+        // // for (server : server_list) { trasmit(); }
+        // int response = transmit(file, command, index, host, user, password);
+        // logger.info("Put file response: {}", response);
 
         return "rules/rules";
     }
@@ -148,138 +152,12 @@ public class RulesController {
     PrintStream originalOut;
     PrintStream originalErr;
 
-    private int transmit(String filename, String command, int index, String host, String user, String password) throws JargonException {
-        String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-        
-        String newFilename;
+    /* IMPORT:
 
-        int response = -1;
-        
-        try {
-            newFilename = prepareFile(command, index, timestamp, filename);
-            response = putFile(newFilename, host, user, password);
-            getResponse(newFilename, host, user, password);
-            new File(newFilename).delete();
-        } catch (OverwriteException e) {
-            originalErr.println("File " + filename + " already exists on target.");
-            e.printStackTrace(originalErr);
-        }  catch (IOException e) {
-            e.printStackTrace(originalErr);
-        }
-        
-        // return timestamp; // TODO: why are you returning the time stamp? why don't you just return 0 or 1
-        return response;
-    }
-    
-    /**
-     * Puts a file up to the iRODS grid resource server
-     * Files can be removed by running "/home/dlgross/removeFiles.txt"
-     * 
-     * @param filename
-     * @return 0 if completed successful
-     * @throws JargonException - Will throw an exception if the files are already on the remote servers
-     *                      Must remove them from remote server using "irm <filename>"
-     */
-    private int putFile(String filename, String host, String user, String password) throws JargonException {
-        originalOut.println("PUT " + filename);
-        
-        // create files
-        String targetIrodsFile = IRODS_PATH + filename;
-        File localFile = new File(filename);
-        
-        // authorize with iRODS
-        IRODSAccount irodsAccount = new IRODSAccount(host, PORT, user, password, HOME_DIR, ZONE, RESOURCE);
-        IRODSFileFactory irodsFileFactory = irodsFileSystem.getIRODSFileFactory(irodsAccount);
-        IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(targetIrodsFile);
-        DataTransferOperations dataTransferOperationsAO = irodsFileSystem.getIRODSAccessObjectFactory().getDataTransferOperations(irodsAccount);
-
-        // transfer file to iRODS grid
-        dataTransferOperationsAO.putOperation(localFile, iRODSFile, null, null);
-        
-        return 0;
-    }
-
-    /**
-     * Function to attempt to get file back from iRODS server. Attempts every 1s until success or
-     * an error other than "File not found"
-     * 
-     * @param timestamp     timestamp to ensure unique filenames on iRODS server
-     * @param filename      local filename
-     * @return              results integer
-     * @throws JargonException 
-     */
-    private int getResponse(String filename, String host, String user, String password) throws JargonException {
-        originalOut.println("GET " + filename + ".res");
-        
-        // authorize with iRODS
-        IRODSAccount irodsAccount = new IRODSAccount(host, PORT, user, password, HOME_DIR, ZONE, RESOURCE);
-        IRODSFileFactory irodsFileFactory = irodsFileSystem.getIRODSFileFactory(irodsAccount);
-        DataTransferOperations dataTransferOperationsAO = irodsFileSystem.getIRODSAccessObjectFactory().getDataTransferOperations(irodsAccount);
-        
-        // generate the files
-        // localFile
-        File localFile = new File("output_" + filename + "s");
-        if (localFile.exists()) {
-            localFile.delete();
-        }
-        // iRODS file
-        String iRODSFilename = IRODS_PATH + filename + ".res";
-        IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(iRODSFilename);
-        
-        // get operation - retry until success. checks once per second
-        boolean done = false;
-        while (!done) {
-            try {
-                dataTransferOperationsAO.getOperation(iRODSFile, localFile, null, null);
-                done = true;
-            } catch (JargonException e) {
-                if (!e.getMessage().equals("File not found")) {
-                    throw e;
-                }
-                
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException ie) {
-                    ie.printStackTrace(originalErr);
-                };
-            }
-        }
-        
-        return 0;
-    }
-    
-    /**
-     * Creates a new file with the appropriate timestamped name
-     * prepends the given file contents with the given command
-     * @param command
-     * @param index
-     * @param timestamp
-     * @param filename
-     * @return
-     * @throws FileNotFoundException
-     * @throws IOException
-     */
-    private String prepareFile(String command, int index, String timestamp, String filename) throws FileNotFoundException, IOException {
-        String indexString = Integer.toString(index);
-        String newfileName = indexString + "_" + timestamp + "-" + filename;
-        
-        // open streams
-        OutputStreamWriter os = new OutputStreamWriter(new FileOutputStream(new File(newfileName)));
-        BufferedReader br = new BufferedReader(new FileReader(new File(filename)));
-        
-        // create new file, prepended with command
-        os.write(command + "\n");
-        String line;
-        while ((line = br.readLine()) != null) {
-            os.write(line + "\n");
-        }
-        
-        // close streams
-        os.close();
-        br.close();
-        
-        return newfileName;
-    }
-
+    * transmit
+    * preparefile
+    * putfile
+    * getresponse
+    */
 }
 
