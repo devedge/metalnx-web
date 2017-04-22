@@ -95,7 +95,7 @@ public class RulesController {
      * @return the template with the rules page
      */
     @RequestMapping(value = "/")
-    public String listrules(Model model) throws DataGridConnectionRefusedException {
+    public String index(Model model) throws DataGridConnectionRefusedException {
 		
 		try {
 			model.addAttribute("resources", resourceService.findAll());
@@ -170,7 +170,7 @@ public class RulesController {
      * @throws IOException
      * @throws FileNotFoundException
      */
-    public File convert(MultipartFile file) throws IOException, FileNotFoundException {
+    private File convert(MultipartFile file) throws IOException, FileNotFoundException {
 		boolean success = (new File("/tmp/emc-tmp-rules/")).mkdirs();
         File convFile = new File("/tmp/emc-tmp-rules/" + file.getOriginalFilename());
 		convFile.createNewFile(); 
@@ -181,19 +181,19 @@ public class RulesController {
     }
 
     private static IRODSFileSystem irodsFileSystem = null;
-    // private static IRODSFileFactory irodsFileFactory = irodsServices.getIRODSFileFactory();
+    // private IRODSFileFactory irodsFileFactory = irodsServices.getIRODSFileFactory();
 
-    final int PORT = 1247;
-    final String HOME_DIR = "/tempZone/home/rods";
-    final String ZONE = "tempZone";
-    final String RESOURCE = "demoResc";
+    private final int PORT = 1247;
+    private final String HOME_DIR = "/tempZone/home/rods";
+    private final String ZONE = "tempZone";
+    private final String RESOURCE = "demoResc";
     
     // path for iRODS grid
-    String IRODS_PATH = "/tempZone/home/rods/.rulecache/";
+    private String IRODS_PATH = "/tempZone/home/rods/.rulecache/";
     
     // print streams
-    PrintStream originalOut;
-    PrintStream originalErr;
+    private PrintStream originalOut;
+    private PrintStream originalErr;
 
     /**
      * Transmits a command to an iRODS host.
@@ -206,7 +206,7 @@ public class RulesController {
      * @return String       a timestamp of the transmission
      * @throws JargonException
      */
-    public String transmit(File file, String command, int index, String host, String user, String password) throws JargonException {
+    private String transmit(File file, String command, int index, String host, String user, String password) throws JargonException, DataGridConnectionRefusedException {
         String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         File newFile = null;
         
@@ -226,7 +226,7 @@ public class RulesController {
     }
 
 
-    public File prepareFile(String command, int index, String timestamp, File file) throws FileNotFoundException, IOException {
+    private File prepareFile(String command, int index, String timestamp, File file) throws FileNotFoundException, IOException {
         String indexString = Integer.toString(index);
         String newfileName = indexString + "_" + timestamp + "-" + file.getName();
         
@@ -249,7 +249,7 @@ public class RulesController {
         return newFile;
     }
 
-    public int putFile(File localFile, String host, String user, String password) throws JargonException {
+    private int putFile(File localFile, String host, String user, String password) throws JargonException, DataGridConnectionRefusedException {
         originalOut.println("PUT " + localFile.getName());
         
         // create files
@@ -257,7 +257,8 @@ public class RulesController {
         
         // authorize with iRODS
         IRODSAccount irodsAccount = new IRODSAccount(host, PORT, user, password, HOME_DIR, ZONE, RESOURCE);
-        IRODSFileFactory irodsFileFactory = irodsFileSystem.getIRODSFileFactory(irodsAccount);
+        // IRODSFileFactory irodsFileFactory = irodsFileSystem.getIRODSFileFactory(irodsAccount);
+        IRODSFileFactory irodsFileFactory = irodsServices.getIRODSFileFactory();
         IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(targetIrodsFile);
         DataTransferOperations dataTransferOperationsAO = irodsFileSystem.getIRODSAccessObjectFactory().getDataTransferOperations(irodsAccount);
 
@@ -267,12 +268,13 @@ public class RulesController {
         return 0;
     }
 
-    public int getResponse(String filename, String host, String user, String password) throws JargonException {
+    private int getResponse(String filename, String host, String user, String password) throws JargonException, DataGridConnectionRefusedException {
         originalOut.println("GET " + filename + ".res\n");
         
         // authorize with iRODS
         IRODSAccount irodsAccount = new IRODSAccount(host, PORT, user, password, HOME_DIR, ZONE, RESOURCE);
-        IRODSFileFactory irodsFileFactory = irodsFileSystem.getIRODSFileFactory(irodsAccount);
+        IRODSFileFactory irodsFileFactory = irodsServices.getIRODSFileFactory();
+        // IRODSFileFactory irodsFileFactory = irodsFileSystem.getIRODSFileFactory(irodsAccount);
         DataTransferOperations dataTransferOperationsAO = irodsFileSystem.getIRODSAccessObjectFactory().getDataTransferOperations(irodsAccount);
         
         // generate the files
