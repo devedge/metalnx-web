@@ -167,7 +167,7 @@
 										<span th:text="#{select.files.upload}"></span>
 									</button>
 								<!-- </div> -->
-								<input type="file" accept=".r,.re" multiple="multiple" name="files"
+								<input type="file" accept=".re" multiple="multiple" name="rulefiles"
 									id="inputFiles" class="form-control" />
 								<div id="filesList">
 								</div>
@@ -213,7 +213,7 @@
 					<div class="modal-footer">
 						<button type="button" class="btn btn-default" data-dismiss="modal"
 							th:text="#{forms.cancel.action.button}"></button>
-						<a type="button" class="btn btn-primary" id="uploadButton" target="_blank" href="?uploadNewTab=true">
+						<a type="button" class="btn btn-primary" id="uploadRulesBtn" target="_blank" href="?uploadNewTab=true">
 							<i class="fa fa-upload"></i> <span th:text="#{upload.label}"></span>
 						</a>
 					</div>
@@ -273,7 +273,7 @@
 			});
 			
 			$("#browseButton").click(function(){
-				$("input[name='files']").click();
+				$("input[name='rulefiles']").click();
 			});
 			
 			$('.modal').on('hidden.bs.modal', function(e){
@@ -318,10 +318,10 @@
 		/**
 		 * Function that checks when the users selects files for upload.
 		 */
-		$("input[name='files']").change(function () {
+		$("input[name='rulefiles']").change(function () {
 			resolvedFileNames = [];
 
-			files = $("input[name='files']").prop("files");
+			files = $("input[name='rulefiles']").prop("files");
 			$('#numberFilesUpload').html(files.length);
 			$('#browseButton').hide();
 
@@ -341,19 +341,19 @@
 		/**
 		 * Handles onclick event when the user clicks on uploading a set of files.
 		 */
-		$("#uploadButton").click(function(){
-			if($("input[name='files']").prop("files").length == 0 ){
+		$("#uploadRulesBtn").click(function(){
+			if($("input[name='rulefiles']").prop("files").length == 0 ){
 				$('#uploadMinMessage').show();
 				return;
 			}
 
 			$('#uploadModal').modal('hide');
 			
-			uploadAndUpdateStatus(files[0], 0, files.length)
+			uploadAndUpdateStatusRule(files[0], 0, files.length)
 		});
 
-		function uploadAndUpdateStatus(file, index, totalFiles){
-		    var url = "/emc-metalnx-web/deployNewRule/";
+		function uploadAndUpdateStatusRule(file, index, totalFiles){
+		    var url = "/emc-metalnx-web/rules/deployNewRule/";
 		    var formData = new FormData();
 		    formData.append('file', file);
 

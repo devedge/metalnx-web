@@ -28,6 +28,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 
 import com.emc.metalnx.core.domain.exceptions.DataGridException;
 import com.emc.metalnx.services.interfaces.*;
@@ -52,6 +58,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.io.*;
 
 import org.irods.jargon.core.connection.IRODSAccount;
 import org.irods.jargon.core.connection.SettableJargonProperties;
@@ -75,7 +82,7 @@ public class RulesController {
     ResourceService resourceService;
 	
 	
-	private static final Logger logger = LoggerFactory.getLogger(CollectionController.class);
+	private static final Logger logger = LoggerFactory.getLogger(RulesController.class);
 
     /**
      * Responds to the rules request
@@ -99,37 +106,53 @@ public class RulesController {
         return "rules/rules";
     }
 
+    @RequestMapping(value = "deployNewRule/", method = RequestMethod.POST, produces = {"text/plain"})
+    @ResponseStatus(value = HttpStatus.OK)
+    public ResponseEntity<?> deployNewRule(Model model, HttpServletRequest request) throws JargonException, IOException, ServletException, JSONException {
+        JSONObject jsonUploadMsg = new JSONObject();
+        HttpStatus status = HttpStatus.OK;
 
-    /**
-     * 
-     * 
-     * @param filename      The name of the file to be deployed.
-     * @param command       Should be "deploy" when deploying a rule.
-     * @param index         The index of the file within the batch
-     * @param host          The hostname of the iRODS server we are deploying to.
-     * @param user          The admin user who is deploying a rule.
-     * @param password      The password of the admin user who is deploying a rule.
-     * @return treeView template that renders all nodes of certain path (parent)
-     * @throws DataGridConnectionRefusedException
-     */
-    @RequestMapping(value = "deployNewRule/", method = RequestMethod.POST) // TODO: may need to make it /deployNewRule/ with preceding slash.
-    public String deployNewRule(Model model, HttpServletRequest request) throws JargonException, IOException, ServletException { // TODO: Code from iRODSPutFileTest.uploadWithFileVerification()
-        Part filePart = request.getPart("file");
-        String fileName = String.valueOf("fileName");
-        File file = new File(fileName);
-        logger.info("---------------------> File received: {}", fileName);
+        try {
+            MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+            MultipartFile multipartFile = multipartRequest.getFile("file");
+            File file = convert(multipartFile);
+            logger.info("-------> File received: {}",  multipartFile.getOriginalFilename());
 
-        // String command = "deploy";
-        // int index = 0;
-        // String host = "sd-vm14.csc.ncsu.edu";
-        // String user = "rods";
-        // String password = "irods";
+            try {
+                jsonUploadMsg.put("filename", multipartFile.getOriginalFilename());
+                jsonUploadMsg.put("httpstatus", "OK");
+            } catch (JSONException e) {
+                logger.info("-------> Error with json response.");
+                logger.error("Could not create JSON object for upload response: {]", e.getMessage());
+                jsonUploadMsg.put("httpstatus", "BAD");
+            } catch (Exception e) {
+                logger.info("-------> Non-json exception happened.");
+            }
 
-        // // for (server : server_list) { trasmit(); }
-        // int response = transmit(file, command, index, host, user, password);
-        // logger.info("Put file response: {}", response);
+        } catch (Exception e) {
+            logger.info("-------> Unknown exception in deployNewRule()");
+            logger.info(e.getMessage());
+			
+			StringWriter sw = new StringWriter();
+			PrintWriter pw = new PrintWriter(sw);
+			e.printStackTrace(pw);
+			// sw.toString();
+			String excToString = sw.toString();
+			logger.info("-------> Exception Stack Trace {}", excToString);
+			
+            jsonUploadMsg.put("httpstatus", "BAD");
+            jsonUploadMsg.put("error", e.getMessage());
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+        }
 
-        return "rules/rules";
+        if (!(request instanceof MultipartHttpServletRequest)) {
+            logger.info("-------> (DEBUG): Request is not multipart request.");
+            logger.debug("Request is not a multipart request.");
+        }
+
+        
+    
+        return new ResponseEntity<>(jsonUploadMsg.toString(),  HttpStatus.OK);
     }
 
     /*
@@ -137,6 +160,16 @@ public class RulesController {
      * **************************** PRIVATE METHODS *****************************
      * **************************************************************************
      */
+
+    public File convert(MultipartFile file) throws IOException, FileNotFoundException {
+		boolean success = (new File("/tmp/emc-tmp-rules/")).mkdirs();
+        File convFile = new File("/tmp/emc-tmp-rules/" + file.getOriginalFilename());
+		convFile.createNewFile(); 
+        FileOutputStream fos = new FileOutputStream(convFile); 
+        fos.write(file.getBytes());
+        fos.close(); 
+        return convFile;
+    }
 
     private static IRODSFileSystem irodsFileSystem = null;
 
