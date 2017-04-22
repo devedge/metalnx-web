@@ -163,6 +163,13 @@ public class RulesController {
      * **************************************************************************
      */
 
+    /**
+     * Takes a multipart file (httpservlet) and converts it to a Java IO File.
+     * @param MultipartFile file    the file received from ajax call
+     * @return File convFile        the converted file
+     * @throws IOException
+     * @throws FileNotFoundException
+     */
     public File convert(MultipartFile file) throws IOException, FileNotFoundException {
 		boolean success = (new File("/tmp/emc-tmp-rules/")).mkdirs();
         File convFile = new File("/tmp/emc-tmp-rules/" + file.getOriginalFilename());
@@ -174,6 +181,7 @@ public class RulesController {
     }
 
     private static IRODSFileSystem irodsFileSystem = null;
+    // private static IRODSFileFactory irodsFileFactory = irodsServices.getIRODSFileFactory();
 
     final int PORT = 1247;
     final String HOME_DIR = "/tempZone/home/rods";
@@ -187,12 +195,118 @@ public class RulesController {
     PrintStream originalOut;
     PrintStream originalErr;
 
-    /* IMPORT:
+    /**
+     * Transmits a command to an iRODS host.
+     * @param file          The input file
+     * @param command       [deploy, delete]
+     * @param index         based on number of servers on the grid
+     * @param host          the name of the host you are transmitting to
+     * @param user          the user who is currently transmitting a file
+     * @param password      the password user trasmitting a file
+     * @return String       a timestamp of the transmission
+     * @throws JargonException
+     */
+    public String transmit(File file, String command, int index, String host, String user, String password) throws JargonException {
+        String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+        File newFile = null;
+        
+        try {
+            newFile = prepareFile(command, index, timestamp, file);
+            putFile(newFile, host, user, password);
+            getResponse(newFile.getName(), host, user, password);
+            newFile.delete();
+        } catch (OverwriteException e) {
+            originalErr.println("File " + file.getName() + " already exists on target.");
+            e.printStackTrace(originalErr);
+        }  catch (IOException e) {
+            e.printStackTrace(originalErr);
+        }
+        newFile.delete();
+        return timestamp;
+    }
 
-    * transmit
-    * preparefile
-    * putfile
-    * getresponse
-    */
+
+    public File prepareFile(String command, int index, String timestamp, File file) throws FileNotFoundException, IOException {
+        String indexString = Integer.toString(index);
+        String newfileName = indexString + "_" + timestamp + "-" + file.getName();
+        
+        // open streams
+        OutputStreamWriter os = new OutputStreamWriter(new FileOutputStream(new File(newfileName)));
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        
+        // create new file, prepended with command
+        os.write(command + "\n");
+        String line;
+        while ((line = br.readLine()) != null) {
+            os.write(line + "\n");
+        }
+        
+        // close streams
+        os.close();
+        br.close();
+        
+        File newFile = new File(newfileName);
+        return newFile;
+    }
+
+    public int putFile(File localFile, String host, String user, String password) throws JargonException {
+        originalOut.println("PUT " + localFile.getName());
+        
+        // create files
+        String targetIrodsFile = IRODS_PATH + localFile.getName();
+        
+        // authorize with iRODS
+        IRODSAccount irodsAccount = new IRODSAccount(host, PORT, user, password, HOME_DIR, ZONE, RESOURCE);
+        IRODSFileFactory irodsFileFactory = irodsFileSystem.getIRODSFileFactory(irodsAccount);
+        IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(targetIrodsFile);
+        DataTransferOperations dataTransferOperationsAO = irodsFileSystem.getIRODSAccessObjectFactory().getDataTransferOperations(irodsAccount);
+
+        // transfer file to iRODS grid
+        dataTransferOperationsAO.putOperation(localFile, iRODSFile, null, null);
+        
+        return 0;
+    }
+
+    public int getResponse(String filename, String host, String user, String password) throws JargonException {
+        originalOut.println("GET " + filename + ".res\n");
+        
+        // authorize with iRODS
+        IRODSAccount irodsAccount = new IRODSAccount(host, PORT, user, password, HOME_DIR, ZONE, RESOURCE);
+        IRODSFileFactory irodsFileFactory = irodsFileSystem.getIRODSFileFactory(irodsAccount);
+        DataTransferOperations dataTransferOperationsAO = irodsFileSystem.getIRODSAccessObjectFactory().getDataTransferOperations(irodsAccount);
+        
+        // generate the files
+        // localFile
+        File localFile = new File("output_" + filename + ".res");
+        if (localFile.exists()) {
+            localFile.delete();
+        }
+        // iRODS file
+        String iRODSFilename = IRODS_PATH + filename + ".res";
+        IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(iRODSFilename);
+        
+        // get operation - retry until success. checks once per second
+        boolean done = false;
+        while (!done) {
+            try {
+                dataTransferOperationsAO.getOperation(iRODSFile, localFile, null, null);
+                done = true;
+            } catch (JargonException e) {
+                if (!e.getMessage().equals("File not found")) {
+                    throw e;
+                }
+                
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ie) {
+                    ie.printStackTrace(originalErr);
+                };
+            }
+        }
+        
+        return 0;
+    }
+
+
 }
 
