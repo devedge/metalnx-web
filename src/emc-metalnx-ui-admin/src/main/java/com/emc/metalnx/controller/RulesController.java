@@ -58,7 +58,10 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.io.*;
+
+// Imports to print full stack traces to the logs
+import java.io.StringWriter;
+import java.io.PrintWriter;
 
 import org.irods.jargon.core.connection.IRODSAccount;
 import org.irods.jargon.core.connection.SettableJargonProperties;
@@ -136,7 +139,6 @@ public class RulesController {
 			StringWriter sw = new StringWriter();
 			PrintWriter pw = new PrintWriter(sw);
 			e.printStackTrace(pw);
-			// sw.toString();
 			String excToString = sw.toString();
 			logger.info("-------> Exception Stack Trace {}", excToString);
 			
