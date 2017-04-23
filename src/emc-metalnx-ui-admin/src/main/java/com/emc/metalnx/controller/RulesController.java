@@ -32,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
@@ -43,10 +44,17 @@ import org.slf4j.LoggerFactory;
 
 import com.emc.metalnx.services.interfaces.IRODSServices;
 import com.emc.metalnx.services.interfaces.UserService;
+import com.emc.metalnx.services.auth.UserTokenDetails;
 
 /********** iRODS File transfer imports ***************/
-import org.irods.jargon.core.pub.DataTransferOperations;
+import org.irods.jargon.core.connection.IRODSAccount;
+import org.irods.jargon.core.connection.SettableJargonProperties;
+import org.irods.jargon.core.exception.JargonException;
+import org.irods.jargon.core.exception.OverwriteException;
+import org.irods.jargon.core.pub.io.IRODSFile;
 import org.irods.jargon.core.pub.IRODSFileSystem;
+import org.irods.jargon.core.pub.io.IRODSFileFactory;
+import org.irods.jargon.core.pub.DataTransferOperations;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -63,12 +71,6 @@ import java.util.Date;
 import java.io.StringWriter;
 import java.io.PrintWriter;
 
-import org.irods.jargon.core.connection.IRODSAccount;
-import org.irods.jargon.core.connection.SettableJargonProperties;
-import org.irods.jargon.core.exception.JargonException;
-import org.irods.jargon.core.exception.OverwriteException;
-import org.irods.jargon.core.pub.io.IRODSFile;
-import org.irods.jargon.core.pub.io.IRODSFileFactory;
 
 @Controller
 @Scope(WebApplicationContext.SCOPE_SESSION)
@@ -83,7 +85,10 @@ public class RulesController {
 	
 	@Autowired
     ResourceService resourceService;
-	
+
+    private UserTokenDetails userTokenDetails = (UserTokenDetails) SecurityContextHolder.getContext().getAuthentication().getDetails();
+    private IRODSAccount irodsAccount = userTokenDetails.getIrodsAccount();
+    private IRODSFileSystem irodsFileSystem = userTokenDetails.getIrodsFileSystem();
 	
 	private static final Logger logger = LoggerFactory.getLogger(RulesController.class);
 
@@ -114,12 +119,43 @@ public class RulesController {
     public ResponseEntity<?> deployNewRule(Model model, HttpServletRequest request) throws JargonException, IOException, ServletException, JSONException {
         JSONObject jsonUploadMsg = new JSONObject();
         HttpStatus status = HttpStatus.OK;
+        File file = null;
 
         try {
             MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
             MultipartFile multipartFile = multipartRequest.getFile("file");
-            File file = convert(multipartFile);
+            file = convert(multipartFile);
             logger.info("-------> File received: {}",  multipartFile.getOriginalFilename());
+
+            // run transmit file
+            int index = 0;
+            logger.info("-------> using IRODSAccount: {}", irodsAccount.toString());
+
+            String timestamp = transmit(file, "deploy", index, irodsAccount);
+            String indexString = Integer.toString(index);
+            
+            // create local file
+            File outfile = new File("tmp/emc-tmp-rules/output_" + indexString + "_" + timestamp + "-" + file.getName() + "s");
+            
+            // check for correct files, file contents
+            // assertTrue(outfile.exists());
+            // FileReader fr = new FileReader(outfile);
+            // BufferedReader br = new BufferedReader(fr);
+            // assertEquals(br.readLine(), res);
+            // br.close();
+            
+
+            // String[] commands = {"deploy","deploy","delete"};
+            // for (int i = 0; i < commands.length; i++) {
+            //     uploadFileWithVerif(acPostProcForPut_file, 0, HOST, commands[i], results[i]);
+            //     fail(e.getMessage());
+
+            //     try {
+            //         Thread.sleep(1000);
+            //     } catch (InterruptedException ie) {
+            //         ie.printStackTrace(originalErr);
+            //     }
+            // }
 
             try {
                 jsonUploadMsg.put("filename", multipartFile.getOriginalFilename());
@@ -132,19 +168,15 @@ public class RulesController {
                 logger.info("-------> Non-json exception happened.");
             }
 
+        } catch (OverwriteException e) {
+            logger.info("File " + file.getName() + " already exists on target system. Must be removed using \'irm\' on target.");
         } catch (Exception e) {
-            logger.info("-------> Unknown exception in deployNewRule()");
-            logger.info(e.getMessage());
+            logger.info("-------> Unknown exception in deployNewRule(): {}", e.getMessage());			
+			logStackTrace("-------> Exception Stack Trace {}", e);
 			
-			StringWriter sw = new StringWriter();
-			PrintWriter pw = new PrintWriter(sw);
-			e.printStackTrace(pw);
-			String excToString = sw.toString();
-			logger.info("-------> Exception Stack Trace {}", excToString);
-			
-            jsonUploadMsg.put("httpstatus", "BAD");
-            jsonUploadMsg.put("error", e.getMessage());
-            status = HttpStatus.INTERNAL_SERVER_ERROR;
+            // jsonUploadMsg.put("httpstatus", "BAD");
+            // jsonUploadMsg.put("error", e.getMessage());
+            // status = HttpStatus.INTERNAL_SERVER_ERROR;
         }
 
         if (!(request instanceof MultipartHttpServletRequest)) {
@@ -152,8 +184,6 @@ public class RulesController {
             logger.debug("Request is not a multipart request.");
         }
 
-        
-    
         return new ResponseEntity<>(jsonUploadMsg.toString(),  HttpStatus.OK);
     }
 
@@ -163,6 +193,21 @@ public class RulesController {
      * **************************************************************************
      */
 
+    private final String TMP_DIR = "/tmp/emc-tmp-rules/";
+    // private static IRODSFileSystem irodsFileSystem = null;
+    
+    private final int PORT = 1247;
+    private final String HOME_DIR = "/tempZone/home/rods";
+    private final String ZONE = "tempZone";
+    private final String RESOURCE = "demoResc";
+    
+    // private String IRODS_PATH = "/tempZone/home/rods/.rulecache/";   // path for iRODS grid
+    private String IRODS_PATH = "/tempZone/home/rods/.gnufoldar/";
+    
+    // print streams
+    private PrintStream originalOut;
+    private PrintStream originalErr;
+    
     /**
      * Takes a multipart file (httpservlet) and converts it to a Java IO File.
      * @param MultipartFile file    the file received from ajax call
@@ -171,29 +216,22 @@ public class RulesController {
      * @throws FileNotFoundException
      */
     private File convert(MultipartFile file) throws IOException, FileNotFoundException {
-		boolean success = (new File("/tmp/emc-tmp-rules/")).mkdirs();
-        File convFile = new File("/tmp/emc-tmp-rules/" + file.getOriginalFilename());
-		convFile.createNewFile(); 
+        boolean success = (new File(TMP_DIR)).mkdirs();
+        File convFile = new File(TMP_DIR + file.getOriginalFilename());
+        convFile.createNewFile(); 
         FileOutputStream fos = new FileOutputStream(convFile); 
         fos.write(file.getBytes());
         fos.close(); 
         return convFile;
     }
 
-    private static IRODSFileSystem irodsFileSystem = null;
-    // private IRODSFileFactory irodsFileFactory = irodsServices.getIRODSFileFactory();
-
-    private final int PORT = 1247;
-    private final String HOME_DIR = "/tempZone/home/rods";
-    private final String ZONE = "tempZone";
-    private final String RESOURCE = "demoResc";
-    
-    // path for iRODS grid
-    private String IRODS_PATH = "/tempZone/home/rods/.rulecache/";
-    
-    // print streams
-    private PrintStream originalOut;
-    private PrintStream originalErr;
+    private void logStackTrace( String s, Exception e ) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+        String excToString = sw.toString();
+        logger.info(s, excToString);
+    }
 
     /**
      * Transmits a command to an iRODS host.
@@ -206,20 +244,23 @@ public class RulesController {
      * @return String       a timestamp of the transmission
      * @throws JargonException
      */
-    private String transmit(File file, String command, int index, String host, String user, String password) throws JargonException, DataGridConnectionRefusedException {
+    private String transmit(File file, String command, int index, IRODSAccount irodsAccount) throws JargonException, DataGridConnectionRefusedException {
         String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         File newFile = null;
         
         try {
             newFile = prepareFile(command, index, timestamp, file);
-            putFile(newFile, host, user, password);
-            getResponse(newFile.getName(), host, user, password);
+            putFile(newFile, irodsAccount);
+            getResponse(newFile.getName(), irodsAccount);
             newFile.delete();
         } catch (OverwriteException e) {
             originalErr.println("File " + file.getName() + " already exists on target.");
-            e.printStackTrace(originalErr);
-        }  catch (IOException e) {
-            e.printStackTrace(originalErr);
+            logStackTrace("-------> OverwriteException in transmit(): {}", e);
+        } catch (IOException e) {
+            logStackTrace("-------> IOException in transmit(): {}", e);
+        } catch (Exception e) {
+            logger.info("-------> EXCEPTION MESSAGE: {}", e.getMessage());
+            logStackTrace("-------> Exception in transmit(): {}", e);
         }
         newFile.delete();
         return timestamp;
@@ -231,7 +272,7 @@ public class RulesController {
         String newfileName = indexString + "_" + timestamp + "-" + file.getName();
         
         // open streams
-        OutputStreamWriter os = new OutputStreamWriter(new FileOutputStream(new File(newfileName)));
+        OutputStreamWriter os = new OutputStreamWriter(new FileOutputStream(new File(TMP_DIR + newfileName)));
         BufferedReader br = new BufferedReader(new FileReader(file));
         
         // create new file, prepended with command
@@ -245,18 +286,18 @@ public class RulesController {
         os.close();
         br.close();
         
-        File newFile = new File(newfileName);
+        File newFile = new File(TMP_DIR + newfileName);
         return newFile;
     }
 
-    private int putFile(File localFile, String host, String user, String password) throws JargonException, DataGridConnectionRefusedException {
-        originalOut.println("PUT " + localFile.getName());
+    private int putFile(File localFile, IRODSAccount irodsAccount) throws JargonException, DataGridConnectionRefusedException {
+        logger.info("-------> PUT " + localFile.getName());
         
         // create files
         String targetIrodsFile = IRODS_PATH + localFile.getName();
         
         // authorize with iRODS
-        IRODSAccount irodsAccount = new IRODSAccount(host, PORT, user, password, HOME_DIR, ZONE, RESOURCE);
+        // IRODSAccount irodsAccount = new IRODSAccount(host, PORT, user, password, HOME_DIR, ZONE, RESOURCE);
         // IRODSFileFactory irodsFileFactory = irodsFileSystem.getIRODSFileFactory(irodsAccount);
         IRODSFileFactory irodsFileFactory = irodsServices.getIRODSFileFactory();
         IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(targetIrodsFile);
@@ -268,27 +309,28 @@ public class RulesController {
         return 0;
     }
 
-    private int getResponse(String filename, String host, String user, String password) throws JargonException, DataGridConnectionRefusedException {
-        originalOut.println("GET " + filename + ".res\n");
+    private int getResponse(String filename, IRODSAccount irodsAccount) throws JargonException, DataGridConnectionRefusedException {
+        logger.info("GET " + filename + ".res\n");
         
         // authorize with iRODS
-        IRODSAccount irodsAccount = new IRODSAccount(host, PORT, user, password, HOME_DIR, ZONE, RESOURCE);
+        // IRODSAccount irodsAccount = new IRODSAccount(host, PORT, user, password, HOME_DIR, ZONE, RESOURCE);
         IRODSFileFactory irodsFileFactory = irodsServices.getIRODSFileFactory();
         // IRODSFileFactory irodsFileFactory = irodsFileSystem.getIRODSFileFactory(irodsAccount);
         DataTransferOperations dataTransferOperationsAO = irodsFileSystem.getIRODSAccessObjectFactory().getDataTransferOperations(irodsAccount);
         
         // generate the files
         // localFile
-        File localFile = new File("output_" + filename + ".res");
+        File localFile = new File(TMP_DIR + "output_" + filename + ".res");
         if (localFile.exists()) {
             localFile.delete();
         }
         // iRODS file
-        String iRODSFilename = IRODS_PATH + filename + ".res";
+        String iRODSFilename = filename + ".res";
         IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(iRODSFilename);
         
         // get operation - retry until success. checks once per second
         boolean done = false;
+        int loop_run = 0;
         while (!done) {
             try {
                 dataTransferOperationsAO.getOperation(iRODSFile, localFile, null, null);
@@ -301,9 +343,12 @@ public class RulesController {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ie) {
-                    ie.printStackTrace(originalErr);
+                    logStackTrace("-------> InterruptedException in getResponse(): {}", e);
                 };
             }
+
+            loop_run++;
+            if ( loop_run >= 10 ) break;
         }
         
         return 0;
