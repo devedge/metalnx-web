@@ -89,6 +89,7 @@ public class RulesController {
     private UserTokenDetails userTokenDetails = (UserTokenDetails) SecurityContextHolder.getContext().getAuthentication().getDetails();
     private IRODSAccount irodsAccount = userTokenDetails.getIrodsAccount();
     private IRODSFileSystem irodsFileSystem = userTokenDetails.getIrodsFileSystem();
+    private IRODSFileFactory irodsFileFactory = irodsServices.getIRODSFileFactory();
 	
 	private static final Logger logger = LoggerFactory.getLogger(RulesController.class);
 
@@ -194,7 +195,6 @@ public class RulesController {
      */
 
     private final String TMP_DIR = "/tmp/emc-tmp-rules/";
-    // private static IRODSFileSystem irodsFileSystem = null;
     
     private final int PORT = 1247;
     private final String HOME_DIR = "/tempZone/home/rods";
@@ -293,14 +293,8 @@ public class RulesController {
     private int putFile(File localFile, IRODSAccount irodsAccount) throws JargonException, DataGridConnectionRefusedException {
         logger.info("-------> PUT " + localFile.getName());
         
-        // create files
-        String targetIrodsFile = IRODS_PATH + localFile.getName();
-        
         // authorize with iRODS
-        // IRODSAccount irodsAccount = new IRODSAccount(host, PORT, user, password, HOME_DIR, ZONE, RESOURCE);
-        // IRODSFileFactory irodsFileFactory = irodsFileSystem.getIRODSFileFactory(irodsAccount);
-        IRODSFileFactory irodsFileFactory = irodsServices.getIRODSFileFactory();
-        IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(targetIrodsFile);
+        IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(IRODS_PATH + localFile.getName());
         DataTransferOperations dataTransferOperationsAO = irodsFileSystem.getIRODSAccessObjectFactory().getDataTransferOperations(irodsAccount);
 
         // transfer file to iRODS grid
@@ -313,12 +307,10 @@ public class RulesController {
         logger.info("GET " + filename + ".res\n");
         
         // authorize with iRODS
-        // IRODSAccount irodsAccount = new IRODSAccount(host, PORT, user, password, HOME_DIR, ZONE, RESOURCE);
-        IRODSFileFactory irodsFileFactory = irodsServices.getIRODSFileFactory();
-        // IRODSFileFactory irodsFileFactory = irodsFileSystem.getIRODSFileFactory(irodsAccount);
         DataTransferOperations dataTransferOperationsAO = irodsFileSystem.getIRODSAccessObjectFactory().getDataTransferOperations(irodsAccount);
         
-        // generate the files
+        // generate the files:
+        
         // localFile
         File localFile = new File(TMP_DIR + "output_" + filename + ".res");
         if (localFile.exists()) {
@@ -326,7 +318,7 @@ public class RulesController {
         }
         // iRODS file
         String iRODSFilename = filename + ".res";
-        IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(iRODSFilename);
+        IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(IRODS_PATH + iRODSFilename);
         
         // get operation - retry until success. checks once per second
         boolean done = false;
@@ -348,7 +340,7 @@ public class RulesController {
             }
 
             loop_run++;
-            if ( loop_run >= 10 ) break;
+            if ( loop_run >= 3 ) break;
         }
         
         return 0;
