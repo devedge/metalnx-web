@@ -145,7 +145,6 @@ public class RulesController {
             // assertEquals(br.readLine(), res);
             // br.close();
             
-
             // String[] commands = {"deploy","deploy","delete"};
             // for (int i = 0; i < commands.length; i++) {
             //     uploadFileWithVerif(acPostProcForPut_file, 0, HOST, commands[i], results[i]);
@@ -154,7 +153,7 @@ public class RulesController {
             //     try {
             //         Thread.sleep(1000);
             //     } catch (InterruptedException ie) {
-            //         ie.printStackTrace(originalErr);
+            //         LOGGG STUFFie.printStackTrace(originalErr);
             //     }
             // }
 
@@ -194,18 +193,15 @@ public class RulesController {
      * **************************************************************************
      */
 
+    
     private final String TMP_DIR = "/tmp/emc-tmp-rules/";
     
-    private final int PORT = 1247;
-    private final String HOME_DIR = "/tempZone/home/rods";
-    private final String ZONE = "tempZone";
-    private final String RESOURCE = "demoResc";
     
-    // private String IRODS_PATH = "/tempZone/home/rods/.rulecache/";   // path for iRODS grid
-    private String IRODS_PATH = "/tempZone/home/rods/.gnufoldar/";
+    // path for iRODS grid
+    private String IRODS_PATH = "/tempZone/home/rods/.rulecache/";
+    // private String IRODS_PATH = "/tempZone/home/rods/.gnufoldar/";
     
     // print streams
-    private PrintStream originalOut;
     private PrintStream originalErr;
     
     /**
@@ -225,11 +221,17 @@ public class RulesController {
         return convFile;
     }
 
+    /**
+     * Log the message and stack trace for an error.
+     * @param String s         The formatted string to print, should include {}.
+     * @param Exception e      The exception whose message and stack trace should be printed.
+     */
     private void logStackTrace( String s, Exception e ) {
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
         e.printStackTrace(pw);
         String excToString = sw.toString();
+        logger.info("-------> Exception Message: {}", e.getMessage());
         logger.info(s, excToString);
     }
 
@@ -259,7 +261,6 @@ public class RulesController {
         } catch (IOException e) {
             logStackTrace("-------> IOException in transmit(): {}", e);
         } catch (Exception e) {
-            logger.info("-------> EXCEPTION MESSAGE: {}", e.getMessage());
             logStackTrace("-------> Exception in transmit(): {}", e);
         }
         newFile.delete();
@@ -268,6 +269,8 @@ public class RulesController {
 
 
     private File prepareFile(String command, int index, String timestamp, File file) throws FileNotFoundException, IOException {
+        logger.info("-------> Appending local file with command: {}", command);
+
         String indexString = Integer.toString(index);
         String newfileName = indexString + "_" + timestamp + "-" + file.getName();
         
@@ -286,12 +289,11 @@ public class RulesController {
         os.close();
         br.close();
         
-        File newFile = new File(TMP_DIR + newfileName);
-        return newFile;
+        return new File(TMP_DIR + newfileName);;
     }
 
     private int putFile(File localFile, IRODSAccount irodsAccount) throws JargonException, DataGridConnectionRefusedException {
-        logger.info("-------> PUT " + localFile.getName());
+        logger.info("-------> Putting local file onto server: {}", localFile.getName());
         
         // authorize with iRODS
         IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(IRODS_PATH + localFile.getName());
@@ -304,18 +306,18 @@ public class RulesController {
     }
 
     private int getResponse(String filename, IRODSAccount irodsAccount) throws JargonException, DataGridConnectionRefusedException {
-        logger.info("GET " + filename + ".res\n");
+        logger.info("-------> Getting response file back from sever: {}", filename + ".res");
         
         // authorize with iRODS
         DataTransferOperations dataTransferOperationsAO = irodsFileSystem.getIRODSAccessObjectFactory().getDataTransferOperations(irodsAccount);
         
         // generate the files:
-        
         // localFile
         File localFile = new File(TMP_DIR + "output_" + filename + ".res");
         if (localFile.exists()) {
             localFile.delete();
         }
+
         // iRODS file
         String iRODSFilename = filename + ".res";
         IRODSFile iRODSFile = irodsFileFactory.instanceIRODSFile(IRODS_PATH + iRODSFilename);
@@ -323,6 +325,7 @@ public class RulesController {
         // get operation - retry until success. checks once per second
         boolean done = false;
         int loop_run = 0;
+        final int LOOP_LIMIT = 3;
         while (!done) {
             try {
                 dataTransferOperationsAO.getOperation(iRODSFile, localFile, null, null);
@@ -340,7 +343,12 @@ public class RulesController {
             }
 
             loop_run++;
-            if ( loop_run >= 3 ) break;
+            logger.info("-------> GetOperation loop #: {}", loop_run);
+
+            if ( loop_run >= LOOP_LIMIT ) {
+                logger.info("-------> Number of GetOperation loops has exceeded {}. Canceling GetOperation.", LOOP_LIMIT);
+                break;
+            }
         }
         
         return 0;
