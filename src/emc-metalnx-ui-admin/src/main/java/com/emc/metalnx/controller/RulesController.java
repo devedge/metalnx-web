@@ -89,7 +89,8 @@ public class RulesController {
     private UserTokenDetails userTokenDetails = (UserTokenDetails) SecurityContextHolder.getContext().getAuthentication().getDetails();
     private IRODSAccount irodsAccount = userTokenDetails.getIrodsAccount();
     private IRODSFileSystem irodsFileSystem = userTokenDetails.getIrodsFileSystem();
-    private IRODSFileFactory irodsFileFactory = irodsServices.getIRODSFileFactory();
+    private IRODSFileFactory irodsFileFactory = null;
+    private final String TMP_DIR = "/tmp/emc-tmp-rules/"; // local directory for temporarily storing files.
 	
 	private static final Logger logger = LoggerFactory.getLogger(RulesController.class);
 
@@ -117,10 +118,14 @@ public class RulesController {
 
     @RequestMapping(value = "deployNewRule/", method = RequestMethod.POST, produces = {"text/plain"})
     @ResponseStatus(value = HttpStatus.OK)
-    public ResponseEntity<?> deployNewRule(Model model, HttpServletRequest request) throws JargonException, IOException, ServletException, JSONException {
+    public ResponseEntity<?> deployNewRule(Model model, HttpServletRequest request, @RequestParam(value = "overwriteTrue") boolean overwriteTrue, 
+        @RequestParam(value = "command") String command) throws JargonException, IOException, ServletException, JSONException, DataGridConnectionRefusedException {
+
+        irodsFileFactory = irodsServices.getIRODSFileFactory();
         JSONObject jsonUploadMsg = new JSONObject();
         HttpStatus status = HttpStatus.OK;
         File file = null;
+        String transmission_error_msg = "ERROR while getting transmission response";
 
         try {
             MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
@@ -132,51 +137,37 @@ public class RulesController {
             int index = 0;
             logger.info("-------> using IRODSAccount: {}", irodsAccount.toString());
 
-            String timestamp = transmit(file, "deploy", index, irodsAccount);
-            String indexString = Integer.toString(index);
-            
-            // create local file
-            File outfile = new File("tmp/emc-tmp-rules/output_" + indexString + "_" + timestamp + "-" + file.getName() + "s");
-            
-            // check for correct files, file contents
-            // assertTrue(outfile.exists());
-            // FileReader fr = new FileReader(outfile);
-            // BufferedReader br = new BufferedReader(fr);
-            // assertEquals(br.readLine(), res);
-            // br.close();
-            
-            // String[] commands = {"deploy","deploy","delete"};
-            // for (int i = 0; i < commands.length; i++) {
-            //     uploadFileWithVerif(acPostProcForPut_file, 0, HOST, commands[i], results[i]);
-            //     fail(e.getMessage());
-
-            //     try {
-            //         Thread.sleep(1000);
-            //     } catch (InterruptedException ie) {
-            //         LOGGG STUFFie.printStackTrace(originalErr);
-            //     }
-            // }
-
-            try {
-                jsonUploadMsg.put("filename", multipartFile.getOriginalFilename());
-                jsonUploadMsg.put("httpstatus", "OK");
-            } catch (JSONException e) {
-                logger.info("-------> Error with json response.");
-                logger.error("Could not create JSON object for upload response: {]", e.getMessage());
-                jsonUploadMsg.put("httpstatus", "BAD");
-            } catch (Exception e) {
-                logger.info("-------> Non-json exception happened.");
+            String respFileName = transmit(file, "deploy", index, irodsAccount);
+            if ( respFileName.equals("")) {
+                throw new Exception(transmission_error_msg); 
             }
+            
+            BufferedReader br = new BufferedReader(new FileReader(new File(respFileName)));
+            String transmit_response = br.readLine();
+            logger.info("-------> TRANSMISSION RESPONSE: {}", transmit_response);
+            br.close();            
+            
+            jsonUploadMsg.put("filename", multipartFile.getOriginalFilename());
+            jsonUploadMsg.put("transmitResponse", transmit_response);
+            jsonUploadMsg.put("httpstatus", "OK");
 
+        } catch (JSONException e) {
+            logger.info("-------> Error with json response.");
+            logger.error("Could not create JSON object for upload response: {]", e.getMessage());
+
+            jsonUploadMsg.put("serverError", e.getMessage());
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
         } catch (OverwriteException e) {
             logger.info("File " + file.getName() + " already exists on target system. Must be removed using \'irm\' on target.");
+
+            jsonUploadMsg.put("serverError", e.getMessage());
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
         } catch (Exception e) {
-            logger.info("-------> Unknown exception in deployNewRule(): {}", e.getMessage());			
-			logStackTrace("-------> Exception Stack Trace {}", e);
+            logger.info("-------> Unknown exception in deployNewRule()");
+			logStackTrace("-------> Exception Stack Trace: {}", e);
 			
-            // jsonUploadMsg.put("httpstatus", "BAD");
-            // jsonUploadMsg.put("error", e.getMessage());
-            // status = HttpStatus.INTERNAL_SERVER_ERROR;
+            jsonUploadMsg.put("serverError", e.getMessage());
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
         }
 
         if (!(request instanceof MultipartHttpServletRequest)) {
@@ -192,17 +183,7 @@ public class RulesController {
      * **************************** PRIVATE METHODS *****************************
      * **************************************************************************
      */
-
-    
-    private final String TMP_DIR = "/tmp/emc-tmp-rules/";
-    
-    
-    // path for iRODS grid
-    private String IRODS_PATH = "/tempZone/home/rods/.rulecache/";
-    // private String IRODS_PATH = "/tempZone/home/rods/.gnufoldar/";
-    
-    // print streams
-    private PrintStream originalErr;
+    private final String IRODS_PATH = "/tempZone/home/rods/.rulecache/";
     
     /**
      * Takes a multipart file (httpservlet) and converts it to a Java IO File.
@@ -246,29 +227,30 @@ public class RulesController {
      * @return String       a timestamp of the transmission
      * @throws JargonException
      */
-    private String transmit(File file, String command, int index, IRODSAccount irodsAccount) throws JargonException, DataGridConnectionRefusedException {
+    private String transmit(File file, String command, int index, IRODSAccount irodsAccount, boolean overwriteTrue) throws JargonException, DataGridConnectionRefusedException {
         String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         File newFile = null;
+        String resp = "";
         
         try {
-            newFile = prepareFile(command, index, timestamp, file);
+            newFile = prepareFile(command, index, timestamp, file, overwriteTrue);
             putFile(newFile, irodsAccount);
-            getResponse(newFile.getName(), irodsAccount);
+            resp = getResponse(newFile.getName(), irodsAccount);
             newFile.delete();
         } catch (OverwriteException e) {
-            originalErr.println("File " + file.getName() + " already exists on target.");
-            logStackTrace("-------> OverwriteException in transmit(): {}", e);
+            logStackTrace("-------> OverwriteException in transmit(). File already exists on target: {}", e);
         } catch (IOException e) {
             logStackTrace("-------> IOException in transmit(): {}", e);
         } catch (Exception e) {
             logStackTrace("-------> Exception in transmit(): {}", e);
         }
         newFile.delete();
-        return timestamp;
+        
+        return resp;
     }
 
 
-    private File prepareFile(String command, int index, String timestamp, File file) throws FileNotFoundException, IOException {
+    private File prepareFile(String command, int index, String timestamp, File file, boolean overwriteTrue) throws FileNotFoundException, IOException {
         logger.info("-------> Appending local file with command: {}", command);
 
         String indexString = Integer.toString(index);
@@ -279,7 +261,13 @@ public class RulesController {
         BufferedReader br = new BufferedReader(new FileReader(file));
         
         // create new file, prepended with command
-        os.write(command + "\n");
+        os.write(command + ",");
+        if (overwriteTrue) {
+            os.write("overwrite=yes\n");
+        } else {
+            os.write("overwrite=no\n");
+        }
+
         String line;
         while ((line = br.readLine()) != null) {
             os.write(line + "\n");
@@ -289,7 +277,7 @@ public class RulesController {
         os.close();
         br.close();
         
-        return new File(TMP_DIR + newfileName);;
+        return new File(TMP_DIR + newfileName);
     }
 
     private int putFile(File localFile, IRODSAccount irodsAccount) throws JargonException, DataGridConnectionRefusedException {
@@ -305,7 +293,7 @@ public class RulesController {
         return 0;
     }
 
-    private int getResponse(String filename, IRODSAccount irodsAccount) throws JargonException, DataGridConnectionRefusedException {
+    private String getResponse(String filename, IRODSAccount irodsAccount) throws JargonException, DataGridConnectionRefusedException {
         logger.info("-------> Getting response file back from sever: {}", filename + ".res");
         
         // authorize with iRODS
@@ -313,7 +301,8 @@ public class RulesController {
         
         // generate the files:
         // localFile
-        File localFile = new File(TMP_DIR + "output_" + filename + ".res");
+        String local_filename = TMP_DIR + "output_" + filename + ".res";
+        File localFile = new File(local_filename);
         if (localFile.exists()) {
             localFile.delete();
         }
@@ -347,11 +336,11 @@ public class RulesController {
 
             if ( loop_run >= LOOP_LIMIT ) {
                 logger.info("-------> Number of GetOperation loops has exceeded {}. Canceling GetOperation.", LOOP_LIMIT);
-                break;
+                return "";
             }
         }
         
-        return 0;
+        return local_filename;
     }
 
 
