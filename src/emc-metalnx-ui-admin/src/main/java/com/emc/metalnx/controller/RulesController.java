@@ -105,7 +105,7 @@ public class RulesController {
     public String index(Model model) throws DataGridConnectionRefusedException {
 		
 		try {
-			model.addAttribute("resources", resourceService.findAll());
+			model.addAttribute("resources", resourceService.findAll()); // TODO: returns all of the servers
 			// logger.info("ALL DATA RETURNED FROM RESOURCE SERVICE {}", resourceService.findAll());
 			
 		} catch (DataGridException e) {
@@ -118,8 +118,7 @@ public class RulesController {
 
     @RequestMapping(value = "deployNewRule/", method = RequestMethod.POST, produces = {"text/plain"})
     @ResponseStatus(value = HttpStatus.OK)
-    public ResponseEntity<?> deployNewRule(Model model, HttpServletRequest request, @RequestParam(value = "overwriteTrue") boolean overwriteTrue, 
-        @RequestParam(value = "command") String command) throws JargonException, IOException, ServletException, JSONException, DataGridConnectionRefusedException {
+    public ResponseEntity<?> deployNewRule(Model model, HttpServletRequest request) throws JargonException, IOException, ServletException, JSONException, DataGridConnectionRefusedException {
 
         irodsFileFactory = irodsServices.getIRODSFileFactory();
         JSONObject jsonUploadMsg = new JSONObject();
@@ -129,15 +128,23 @@ public class RulesController {
 
         try {
             MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+            
+            // Get the file to transfer
             MultipartFile multipartFile = multipartRequest.getFile("file");
             file = convert(multipartFile);
             logger.info("-------> File received: {}",  multipartFile.getOriginalFilename());
 
-            // run transmit file
+            // Get transfer options
+            String overwriteTrue = multipartRequest.getParameter("overwriteTrue");
+            String command = multipartRequest.getParameter("command");
+            logger.info("-------> overwrite duplicates: {}",  Boolean.toString(overwriteTrue));
+            logger.info("-------> command: {}",  command);
+
+            // Transmit the file
             int index = 0;
             logger.info("-------> using IRODSAccount: {}", irodsAccount.toString());
 
-            String respFileName = transmit(file, "deploy", index, irodsAccount);
+            String respFileName = transmit(file, command, index, irodsAccount, overwriteTrue);
             if ( respFileName.equals("")) {
                 throw new Exception(transmission_error_msg); 
             }
@@ -175,7 +182,7 @@ public class RulesController {
             logger.debug("Request is not a multipart request.");
         }
 
-        return new ResponseEntity<>(jsonUploadMsg.toString(),  HttpStatus.OK);
+        return new ResponseEntity<>(jsonUploadMsg.toString(),  status);
     }
 
     /*

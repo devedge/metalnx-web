@@ -356,8 +356,11 @@
 		    var url = "/emc-metalnx-web/rules/deployNewRule/";
 		    var formData = new FormData();
 		    formData.append('file', file);
+		    formData.append('overwriteTrue', $('#inputOverwriteDuplicateFiles').is(':checked'));
+		    formData.append('command', 'deploy');
 
-		    console.log(file);
+
+		    // console.log(file);
 
 		    $.ajax({
 		        url: url,
@@ -365,7 +368,14 @@
 		        data: formData,
 		        cache: false,
 		        contentType: false,
-		        processData: false
+		        processData: false,
+		        success: function (res) {
+		            var response = $.parseJSON(res);
+		            var transmit_response = response.transmitResponse;
+		            var error = response.err;
+		            alert(transmit_response);
+		            // showTransferCompletedMsg(0, transmit_response);
+		        },
 		    });
 		}
 		</script>
