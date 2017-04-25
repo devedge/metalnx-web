@@ -135,9 +135,10 @@ public class RulesController {
             logger.info("-------> File received: {}",  multipartFile.getOriginalFilename());
 
             // Get transfer options
-            String overwriteTrue = multipartRequest.getParameter("overwriteTrue");
+            String overwriteStr = multipartRequest.getParameter("overwriteTrue");
+            boolean overwriteTrue = Boolean.valueOf(overwriteStr);
             String command = multipartRequest.getParameter("command");
-            logger.info("-------> overwrite duplicates: {}",  Boolean.toString(overwriteTrue));
+            logger.info("-------> overwrite duplicates: {}", overwriteStr);
             logger.info("-------> command: {}",  command);
 
             // Transmit the file
@@ -145,9 +146,7 @@ public class RulesController {
             logger.info("-------> using IRODSAccount: {}", irodsAccount.toString());
 
             String respFileName = transmit(file, command, index, irodsAccount, overwriteTrue);
-            if ( respFileName.equals("")) {
-                throw new Exception(transmission_error_msg); 
-            }
+            if ( respFileName.equals("")) throw new Exception(transmission_error_msg);
             
             BufferedReader br = new BufferedReader(new FileReader(new File(respFileName)));
             String transmit_response = br.readLine();
@@ -255,7 +254,6 @@ public class RulesController {
         
         return resp;
     }
-
 
     private File prepareFile(String command, int index, String timestamp, File file, boolean overwriteTrue) throws FileNotFoundException, IOException {
         logger.info("-------> Appending local file with command: {}", command);
