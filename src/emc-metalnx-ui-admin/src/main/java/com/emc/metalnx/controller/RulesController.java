@@ -16,6 +16,10 @@
 
 package com.emc.metalnx.controller;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.ArrayList;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.Part;
 import javax.servlet.ServletException;
@@ -138,8 +142,13 @@ public class RulesController {
             String overwriteStr = multipartRequest.getParameter("overwriteTrue");
             boolean overwriteTrue = Boolean.valueOf(overwriteStr);
             String command = multipartRequest.getParameter("command");
+            
+            String hostListStr = multipartRequest.getParameter("hostList");
+            List<String> hostList = new ArrayList<String>(Arrays.asList(hostListStr.split(",")));
+
             logger.info("-------> overwrite duplicates: {}", overwriteStr);
             logger.info("-------> command: {}",  command);
+            logger.info("host list: {}", Arrays.toString(hostList.toArray()));
 
             // Transmit the file
             int index = 0;

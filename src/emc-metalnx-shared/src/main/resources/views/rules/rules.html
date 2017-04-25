@@ -103,38 +103,28 @@
 							</div>
 
 							<div id="uploadControlOptions">
-								<input type="hidden" id="`" value="/tempZone/home/rods/.gnufoldar" />
 								<div class="row form-group">
-									<div class="col-md-6">Resource</div>
-									<div class="col-md-6">
-											<input type="checkbox" id="inputReplica" name="replica"
-												value="1" /> &nbsp;&nbsp;<span>Replica</span>
+									<div class="col-md-8">
+										<div class="btn-group" id="#selectResources">
+										  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+										    Select Resources <span class="caret"></span>
+										  </button>
+										  <div class="dropdown-menu" id="resourceCheckboxes">
+										    <!-- <ul> -->
+										       <li th:each="resource : ${resources}">
+										         <input type="checkbox" th:value="${resource.host}"/> 
+										         <label th:text="${resource.name}">Resource Name</label>
+										       </li>
+										    <!-- </ul> -->
+										  </div>
+										</div>
 									</div>
-									<div class="col-md-6">
-										<select class="form-control" name="resourceToUpload"
-											id="selectResourceToUpload">
-										</select>
-									</div>
-									<div class="col-md-6">
-										<select class="form-control" name="resources" disabled="disabled"
-											id="selectResource">
-										</select>
-									</div>
-								</div>
-
- 								<div class="row form-group">
-									<div class="col-md-6">
+									<div class="col-md-4">
 										<input type="checkbox" id="inputOverwriteDuplicateFiles"
 											name="inputOverwriteDuplicateFiles"
-											th:checked="${overwriteFileOption}" /> &nbsp;&nbsp;<span>Overwrite
-											duplicate files</span>
+											th:checked="${overwriteFileOption}" /> &nbsp;&nbsp;<span>Overwriteduplicate files</span>
 									</div>
-									<div class="col-md-6">
-										<input type="checkbox" id="inputChecksum" name="checksum"
-										value="1" /> &nbsp;&nbsp;<span>Checksum</span>
-									</div>
- 								</div>
-
+								</div>
 							</div>
 						</form>
 
@@ -267,12 +257,25 @@
 			console.log('user selected: '+ command);
 		});
 
-		function uploadAndUpdateStatusRule(file, index, totalFiles){
+		$('#resourceCheckboxes li').click(function(e) {
+		    e.stopPropagation();
+		});
+
+		function uploadAndUpdateStatusRule(file, index, totalFiles) {
+		    // get list of hosts to upload to
+		    var host_list = [];
+			$('#resourceCheckboxes input:checked').each(function() {
+			    host_list.push($(this).attr('value'));
+			    console.log("host_list:");
+			    console.log(host_list);
+			});
+
 		    var url = "/emc-metalnx-web/rules/deployNewRule/";
 		    var formData = new FormData();
 		    formData.append('file', file);
 		    formData.append('overwriteTrue', $('#inputOverwriteDuplicateFiles').is(':checked'));
 		    formData.append('command', command);
+		    formData.append('hostList', host_list);
 
 		    $.ajax({
 		        url: url,
