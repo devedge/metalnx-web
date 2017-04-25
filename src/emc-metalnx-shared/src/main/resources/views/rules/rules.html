@@ -78,7 +78,7 @@
 								<button type="button" class="close" data-dismiss="alert">
 									<span aria-hidden="true">&times;</span> <span class="sr-only">Close</span>
 								</button>
-								<span>Select at least one file</span>
+								<span id="modalWarning">Select at least one file</span>
 							</div>
 						</div>
 						<!-- Form submitted as soon as the user selects all files to be uploaded -->
@@ -91,7 +91,7 @@
 									selected</span>
 							</p>
 							<div class="well">
-								<!-- <div class="col-sm-4 col-sm-offset-4" style="align-items: center; display: flex; min-height: 100%;"> -->`
+								<!-- <div class="col-sm-4 col-sm-offset-4" style="align-items: center; display: flex; min-height: 100%;"> -->
 									<button type="button" class="btn btn-primary btn-sm" id="browseButton" style="margin: 10% auto;">
 										<span th:text="#{select.files.upload}"></span>
 									</button>
@@ -104,7 +104,7 @@
 
 							<div id="uploadControlOptions">
 								<div class="row form-group">
-									<div class="col-md-8">
+									<div class="col-md-6">
 										<div class="btn-group" id="#selectResources">
 										  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 										    Select Resources <span class="caret"></span>
@@ -112,17 +112,17 @@
 										  <div class="dropdown-menu" id="resourceCheckboxes">
 										    <!-- <ul> -->
 										       <li th:each="resource : ${resources}">
-										         <input type="checkbox" th:value="${resource.host}"/> 
+										         <input type="checkbox" th:value="${resource.host}" checked="checked"/> 
 										         <label th:text="${resource.name}">Resource Name</label>
 										       </li>
 										    <!-- </ul> -->
 										  </div>
 										</div>
 									</div>
-									<div class="col-md-4">
+									<div class="col-md-6">
 										<input type="checkbox" id="inputOverwriteDuplicateFiles"
 											name="inputOverwriteDuplicateFiles"
-											th:checked="${overwriteFileOption}" /> &nbsp;&nbsp;<span>Overwriteduplicate files</span>
+											th:checked="${overwriteFileOption}" /> &nbsp;&nbsp;<span>Overwrite duplicate files</span>
 									</div>
 								</div>
 							</div>
@@ -130,9 +130,8 @@
 
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal"
-							th:text="#{forms.cancel.action.button}"></button>
-						<a type="button" class="btn btn-primary" id="uploadRulesBtn" target="_blank" href="?uploadNewTab=true">
+						<button type="button" class="btn btn-default" data-dismiss="modal" th:text="#{forms.cancel.action.button}"></button>
+						<a type="button" class="btn btn-primary disabled" id="uploadRulesBtn" target="_blank" href="?uploadNewTab=true">
 							<i class="fa fa-upload"></i> <span th:text="#{upload.label}"></span>
 						</a>
 					</div>
@@ -163,6 +162,9 @@
 					
 					// Hiding the resource selection box on the upload modal
 					$("#selectResource").prop("disabled", true);
+					
+					// Disable the button
+					$('#uploadRulesBtn').addClass('disabled');
 				});
 				
 			});
@@ -231,6 +233,7 @@
 				console.log("-------> Adding file: " + fileName);
 			});
 
+			$('#uploadRulesBtn').removeClass('disabled');
 			$('#uploadControlOptions').show();
 		});
 		
@@ -239,15 +242,42 @@
 		/**
 		 * Handles onclick event when the user clicks on uploading a set of files.
 		 */
-		$("#uploadRulesBtn").click(function(){
+		$("#uploadRulesBtn").click(function(event){
+			// Selected resouce counter
+			var numResourcesChecked = 0;
+			
 			if($("input[name='rulefiles']").prop("files").length == 0 ){
+				$('#uploadMinMessage').show();
+				$('#uploadRulesBtn').addClass('disabled');
+				return;
+			}
+			
+			// Verify that at least one of the resource servers is checked
+			$('#resourceCheckboxes input:checked').each(function() {
+				if ($(this).attr('value')) {
+					numResourcesChecked++;
+				}
+			});
+
+			// If at least one resource server is selected, allow file upload
+			if (numResourcesChecked > 0) {
+				$('#uploadModal').modal('hide');
+				
+				uploadAndUpdateStatusRule(files[0], 0, files.length);
+				
+				// Reset the text back to the default warning about empty files
+				$('#modalWarning').text("Select at least one file");
+			} else {
+				// Change the warning message to reflect that insufficient resources are selected
+				$('#modalWarning').text("Select at least one Resource");
+				
+				// Prevent the upload button from the default action
+				event.preventDefault();
+				
+				// Show the warning message
 				$('#uploadMinMessage').show();
 				return;
 			}
-
-			$('#uploadModal').modal('hide');
-			
-			uploadAndUpdateStatusRule(files[0], 0, files.length);
 		});
 
 

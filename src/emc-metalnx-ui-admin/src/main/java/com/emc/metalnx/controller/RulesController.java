@@ -129,6 +129,7 @@ public class RulesController {
         HttpStatus status = HttpStatus.OK;
         File file = null;
         String transmission_error_msg = "ERROR while getting transmission response";
+		String empty_host_list_error_msg = "ERROR no hosts in host list";
 
         try {
             MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
@@ -150,21 +151,29 @@ public class RulesController {
             logger.info("-------> command: {}",  command);
             logger.info("host list: {}", Arrays.toString(hostList.toArray()));
 
-            // Transmit the file
-            int index = 0;
-            logger.info("-------> using IRODSAccount: {}", irodsAccount.toString());
-
-            String respFileName = transmit(file, command, index, irodsAccount, overwriteTrue);
-            if ( respFileName.equals("")) throw new Exception(transmission_error_msg);
-            
-            BufferedReader br = new BufferedReader(new FileReader(new File(respFileName)));
-            String transmit_response = br.readLine();
-            logger.info("-------> TRANSMISSION RESPONSE: {}", transmit_response);
-            br.close();            
-            
-            jsonUploadMsg.put("filename", multipartFile.getOriginalFilename());
-            jsonUploadMsg.put("transmitResponse", transmit_response);
-            jsonUploadMsg.put("httpstatus", "OK");
+			// Transmit the file
+			for (int index = 0; index < hostList.size(); index++) {
+				irodsAccount = new IRODSAccount(hostList.get(index),
+					irodsAccount.getPort(), 
+					irodsAccount.getUserName(), 
+					irodsAccount.getPassword(), 
+					irodsAccount.getHomeDirectory(),
+					irodsAccount.getZone(),
+					irodsAccount.getDefaultStorageResource());
+				
+				logger.info("-------> using IRODSAccount: {}", irodsAccount.toString());
+				String respFileName = transmit(file, command, index, irodsAccount, overwriteTrue);
+				
+				if ( respFileName.equals("")) throw new Exception(transmission_error_msg);
+				
+				BufferedReader br = new BufferedReader(new FileReader(new File(respFileName)));
+				String transmit_response = br.readLine();
+				logger.info("-------> TRANSMISSION RESPONSE: {}", transmit_response);
+				br.close();
+				jsonUploadMsg.put("filename", multipartFile.getOriginalFilename());
+				jsonUploadMsg.put("transmitResponse", transmit_response);
+				jsonUploadMsg.put("httpstatus", "OK");
+			}
 
         } catch (JSONException e) {
             logger.info("-------> Error with json response.");
