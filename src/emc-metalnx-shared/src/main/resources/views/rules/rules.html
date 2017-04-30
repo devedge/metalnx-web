@@ -160,7 +160,6 @@
 			var files;
 			var resolvedFileNames = [];
 			var originalPagetitle = $('title').html();
-			var command;
 
 			/**
 			 * Function that checks when the users selects files for upload.
@@ -191,18 +190,16 @@
 			 * Handles onclick event when the user clicks on uploading a set of files.
 			 */
 			$("#uploadRulesBtn").click(function(event){
-				command = 'deploy';
-				triggerUpload(event);
+				triggerUpload(event, 'deploy');
 			});
 			
 			$("#deleteRulesBtn").click(function(event){
-				command = 'delete';
-				triggerUpload(event);
+				triggerUpload(event, 'delete');
 			});
 			
 			// Function that retrives user-selected files and calls the 
 			// upload function
-			function triggerUpload(eventaction) {
+			function triggerUpload(e, buttonCommand) {
 				// Selected resouce counter
 				// This is also the point where it gets reset to 0
 				var numResourcesChecked = 0;
@@ -225,7 +222,7 @@
 				// If at least one resource server is selected, allow file upload
 				if (numResourcesChecked > 0) {
 					// Call the ajax function
-					uploadAndUpdateStatusRule(files[0], 0, files.length);
+					uploadAndUpdateStatusRule(files[0], 0, files.length, buttonCommand);
 					
 					resetRulesElements();
 					
@@ -236,7 +233,7 @@
 					$('#headerWarning').text("Select at least one Resource");
 					
 					// Prevent the upload button from the default action
-					eventaction.preventDefault();
+					e.preventDefault();
 					
 					// Show the warning message
 					$('#uploadMinMessage').show();
@@ -248,7 +245,7 @@
 			    e.stopPropagation();
 			});
 
-			function uploadAndUpdateStatusRule(file, index, totalFiles) {
+			function uploadAndUpdateStatusRule(file, index, totalFiles, command) {
 			    // get list of hosts to upload to
 			    var host_list = [];
 				$('#resourceCheckboxes input:checked').each(function() {
