@@ -39,6 +39,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.codehaus.jettison.json.JSONArray;
 
 import com.emc.metalnx.core.domain.exceptions.DataGridException;
 import com.emc.metalnx.services.interfaces.*;
@@ -150,6 +151,8 @@ public class RulesController {
             logger.info("-------> overwrite duplicates: {}", overwriteStr);
             logger.info("-------> command: {}",  command);
             logger.info("host list: {}", Arrays.toString(hostList.toArray()));
+			
+			JSONArray resps = new JSONArray();
 
 			// Transmit the file
 			for (int index = 0; index < hostList.size(); index++) {
@@ -170,10 +173,17 @@ public class RulesController {
 				String transmit_response = br.readLine();
 				logger.info("-------> TRANSMISSION RESPONSE: {}", transmit_response);
 				br.close();
-				jsonUploadMsg.put("filename", multipartFile.getOriginalFilename());
-				jsonUploadMsg.put("transmitResponse", transmit_response);
-				jsonUploadMsg.put("httpstatus", "OK");
+				
+				JSONObject resp = new JSONObject();
+				resp.put("host",hostList.get(index));
+				resp.put("msg",transmit_response);
+				resps.put(resp);
+				
 			}
+			
+			jsonUploadMsg.put("filename", multipartFile.getOriginalFilename());
+			jsonUploadMsg.put("transmitResponse",resps);
+			jsonUploadMsg.put("httpstatus", "OK");
 
         } catch (JSONException e) {
             logger.info("-------> Error with json response.");
