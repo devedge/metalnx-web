@@ -22,12 +22,11 @@
 				</h1>
 				<a id="rules-page-title"  href="#" class="page-hint pull-right"><i class="fa fa-question-circle"></i></a>
 				<div class="header-line"></div>
-                
-				<!-- Rule upload section -->
 				
-				<!-- Left blank side -->
+				<!-- Left side spacer -->
 				<div class="col-sm-3"></div>
 				
+				<!-- Rule upload section -->
 				<div class="col-sm-6">
 					<div class="row">
 						<div class="col-sm-12">
@@ -43,18 +42,15 @@
 							<!-- Form submitted as soon as the user selects all files to be uploaded -->
 							<form action="/emc-metalnx-web/upload/uploadSimple" method="POST"
 								  role="form" enctype="multipart/form-data" id="uploadForm">
-
 								
 								<p class="text-right">
 									<span id="numberFilesUpload">No</span><span>&nbsp;file(s)
 										selected</span>
 								</p>
 								<div class="well">
-									<!-- <div class="col-sm-4 col-sm-offset-4" style="align-items: center; display: flex; min-height: 100%;"> -->
-										<button type="button" class="btn btn-primary btn-sm" id="browseButton" style="margin: 10% auto;">
-											<span th:text="#{select.files.upload}"></span>
-										</button>
-									<!-- </div> -->
+									<button type="button" class="btn btn-primary btn-sm" id="browseButton" style="margin: 10% auto;">
+										<span th:text="#{select.files.upload}"></span>
+									</button>
 									<input type="file" accept=".re" multiple="multiple" name="rulefiles"
 										id="inputFiles" class="form-control" />
 									<div id="filesList">
@@ -69,12 +65,10 @@
 												Select Resources <span class="caret"></span>
 											  </button>
 											  <div class="dropdown-menu" id="resourceCheckboxes">
-												<!-- <ul> -->
 												   <li th:each="resource : ${resources}">
 													 <input type="checkbox" th:value="${resource.host}" checked="checked"/> 
 													 <label th:text="${resource.name}">Resource Name</label>
 												   </li>
-												<!-- </ul> -->
 											  </div>
 											</div>
 										</div>
@@ -91,6 +85,7 @@
 					
 					<br></br>
 					
+					<!-- Deploy and Delete buttons -->
 					<div class="row">	
 						<div class="col-sm-12">
 							<div class="col-sm-6">
@@ -105,131 +100,29 @@
 							</div>
 						</div>
 					</div>
+					
+					<br></br>
+					<br></br>
+					
+					<!-- Server results section -->
+					<div class="row">
+						<h4 class="pull-left">Server Responses</h4>
+					</div>
+					<div class="row">
+						<div class="well" style="max-height: 7; overflow-y: scroll;">
+							<div id="serverResponseList">
+							</div>
+						</div>
+					</div>
 				</div>
 				
-				<!-- Right blank side -->
+				<!-- Right side spacer -->
 				<div class="col-sm-3"></div>
 				
-                
-
-                <!-- Select Dropdown -->
-                <!-- <div id="actions" class="col-xs-6"> -->
-                    <!-- <div class="btn-group pull-left">
-                        <button type="button" id="command-btn" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false" >
-                            <span>Select Action</span> &nbsp;
-                            <span class="caret"></span>
-                            <span class="sr-only">Toggle Dropdown</span>
-                        </button>
-                        <ul class="dropdown-menu" role="menu">
-                            <li>
-                                <a href="#" class="command-li" data-command="deploy">
-                                    <span><i class="fa fa-exchange"></i> </span>
-                                    <span>Deploy Rule</span>
-                                </a>	
-                            </li>
-                            <li class="divider"></li>
-                            <li>
-                                <a href="#" class="command-li" data-command="delete">
-                                    <span><i class="fa fa-trash-o"></i> </span> 
-                                    <span>Delete Rule</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div> -->
-					
-					
-					
-                <!-- </div> --> <!-- /. Select Dropdown -->
-				
-				<!-- <button type="button" class="btn btn-primary pull-right" data-toggle="modal" data-target="#uploadModal" aria-expanded="false" >
-					<span><i class="fa fa-cloud-upload"></i> </span> 
-					<span>Upload External Rule</span> &nbsp;
-				</button> -->
 	        </div>
         </div> <!-- /. Main Boostrap row -->
-        
-        
-		<!-- Upload Modal -->
-		<!-- <div class="modal fade" id="uploadModal" tabindex="-1" role="dialog"
-			aria-labelledby="myModalLabel" aria-hidden="true">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-header">
-						<button type="button" class="close" data-dismiss="modal">
-							<span aria-hidden="true">&times;</span><span class="sr-only">Close</span>
-						</button>
-						<h4 class="modal-title" th:text="#{upload.label}"></h4>
-					</div>
-					<div class="modal-body">
-						<div class="hideElement" id="uploadMinMessage">
-							<div class="alert alert-warning alert-dismissible text-center"
-								role="alert">
-								<button type="button" class="close" data-dismiss="alert">
-									<span aria-hidden="true">&times;</span> <span class="sr-only">Close</span>
-								</button>
-								<span id="headerWarning">Select at least one file</span>
-							</div>
-						</div> -->
-						<!-- Form submitted as soon as the user selects all files to be uploaded -->
-                        <!-- <form action="/emc-metalnx-web/upload/uploadSimple" method="POST"
-                              role="form" enctype="multipart/form-data" id="uploadForm">
-
-							
-							<p class="text-right">
-								<span id="numberFilesUpload">No</span><span>&nbsp;file(s)
-									selected</span>
-							</p>
-							<div class="well"> -->
-								<!-- <div class="col-sm-4 col-sm-offset-4" style="align-items: center; display: flex; min-height: 100%;"> -->
-									<!-- <button type="button" class="btn btn-primary btn-sm" id="browseButton" style="margin: 10% auto;">
-										<span th:text="#{select.files.upload}"></span>
-									</button> -->
-								<!-- </div> -->
-								<!-- <input type="file" accept=".re" multiple="multiple" name="rulefiles"
-									id="inputFiles" class="form-control" />
-								<div id="filesList">
-								</div>
-							</div>
-
-							<div id="uploadControlOptions">
-								<div class="row form-group">
-									<div class="col-md-6">
-										<div class="btn-group" id="#selectResources">
-										  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-										    Select Resources <span class="caret"></span>
-										  </button>
-										  <div class="dropdown-menu" id="resourceCheckboxes"> -->
-										    <!-- <ul> -->
-										       <!-- <li th:each="resource : ${resources}">
-										         <input type="checkbox" th:value="${resource.host}" checked="checked"/> 
-										         <label th:text="${resource.name}">Resource Name</label>
-										       </li> -->
-										    <!-- </ul> -->
-										  <!-- </div>
-										</div>
-									</div>
-									<div class="col-md-6">
-										<input type="checkbox" id="inputOverwriteDuplicateFiles"
-											name="inputOverwriteDuplicateFiles"
-											th:checked="${overwriteFileOption}" /> &nbsp;&nbsp;<span>Overwrite duplicate files</span>
-									</div>
-								</div>
-							</div>
-						</form>
-
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal" th:text="#{forms.cancel.action.button}"></button>
-						<a type="button" class="btn btn-primary disabled" id="uploadRulesBtn" target="_blank" href="?uploadNewTab=true">
-							<i class="fa fa-upload"></i> <span th:text="#{upload.label}"></span>
-						</a>
-					</div>
-				</div>
-			</div>
-		</div> -->
 		
 		<script type="text/javascript" th:inline="javascript">
-		/*<![CDATA[*/
 			$(document).ready(function(){
 				
 				// Add popover on page title
@@ -240,198 +133,160 @@
 					placement: 'left',
 				});
 				
-				// $('#uploadModal').on('show.bs.modal', function(){
-				$('#uploadForm').each(function(){
-					this.reset();
-				});
-				$('#filesList').html('');
-				$('#numberFilesUpload').html('No');
-				// $('#uploadControlOptions').hide();
-				$('#browseButton').show();
-				
-				// Hiding the resource selection box on the upload modal
-				// $("#selectResource").prop("disabled", true);
-				
-				// Disable the button
-				$('#uploadRulesBtn').addClass('disabled');
-				$('#deleteRulesBtn').addClass('disabled');
-				// });
-				
+				resetRulesElements();
 			});
-			
-			// function updateResourceForReplicationOptions() {
-	        // 	$("#selectResource > option").remove();
-    		// 	$("#selectResourceToUpload > option").each(function() {
-    		// 		if(!$(this).is(":selected")) {
-    		// 			$("#selectResource").append($(this).clone());
-    		// 		}	    				
-    		// 	});
-	        // }
-			// 
-			// $("#selectResourceToUpload").change(function() {
-	        // 	updateResourceForReplicationOptions();
-	        // });
-			// 
-			// $("#inputReplica").change(function () {
-	        // 	if($(this).is(":checked")) {	   
-	        // 		updateResourceForReplicationOptions();	    			
-	        //         $("#selectResource").prop("disabled", false);
-	        //     }
-	        // 	else {
-	        //         $("#selectResource").prop("disabled", true);        		
-	        // 	}
-			// });
 			
 			$("#browseButton").click(function(){
 				$("input[name='rulefiles']").click();
 			});
 			
-			// $('.modal').on('hidden.bs.modal', function(e){
-	        // 	$(".modal a").each(function(){
-			// 		if($(this).attr('onclick') !== undefined){
-			// 			if($(this).attr('onclick').indexOf('retractElement') >= 0){
-			// 				eval($(this).attr('onclick'));
-			// 			}
-			// 		}
-			// 	});
-	        // });
-			
-		/*]]>*/
-		/**
-		 * JS file used for implementing the bulk upload function.
-		 */
-		var files;
-		var resolvedFileNames = [];
-		var originalPagetitle = $('title').html();
-		var command;
-
-		/**
-		 * Function that checks when the users selects files for upload.
-		 */
-		$("input[name='rulefiles']").change(function () {
-			resolvedFileNames = [];
-
-			files = $("input[name='rulefiles']").prop("files");
-			$('#numberFilesUpload').html(files.length);
-			$('#browseButton').hide();
-
-			$.each(files, function(index, file){
-				var fileName = resolveFileName(file.name);
-				$("#filesList").append('<p>' + fileName + '</p>');
-				resolvedFileNames.push(fileName);
-
-				console.log("-------> Adding file: " + fileName);
-			});
-
-			$('#uploadRulesBtn').removeClass('disabled');
-			$('#deleteRulesBtn').removeClass('disabled');
-			// $('#uploadControlOptions').show();
-		});
-		
-
-		//--CUSTOM TRANSFER CHANGES HERE --------------------
-		/**
-		 * Handles onclick event when the user clicks on uploading a set of files.
-		 */
-		$("#uploadRulesBtn").click(function(event){
-			triggerUpload(event);
-		});
-		
-		$("#deleteRulesBtn").click(function(event){
-			triggerUpload(event);
-		});
-		
-		// Function that retrives user-selected files and calls the 
-		// upload function
-		function triggerUpload(eventaction) {
-			// Selected resouce counter
-			var numResourcesChecked = 0;
-			
-			if($("input[name='rulefiles']").prop("files").length == 0 ){
-				$('#uploadMinMessage').show();
+			// Reset elements
+			function resetRulesElements() {
+				$('#uploadForm').each(function(){
+					this.reset();
+				});
+				$('#filesList').html('');
+				$('#numberFilesUpload').html('No');
+				$('#browseButton').show();
+				
+				// Disable the buttons
 				$('#uploadRulesBtn').addClass('disabled');
 				$('#deleteRulesBtn').addClass('disabled');
-				return;
 			}
 			
-			// Verify that at least one of the resource servers is checked
-			$('#resourceCheckboxes input:checked').each(function() {
-				if ($(this).attr('value')) {
-					numResourcesChecked++;
+			/**
+			 * JS file used for implementing the bulk upload function.
+			 */
+			var files;
+			var resolvedFileNames = [];
+			var originalPagetitle = $('title').html();
+			var command;
+
+			/**
+			 * Function that checks when the users selects files for upload.
+			 */
+			$("input[name='rulefiles']").change(function () {
+				resolvedFileNames = [];
+
+				files = $("input[name='rulefiles']").prop("files");
+				$('#numberFilesUpload').html(files.length);
+				$('#browseButton').hide();
+
+				$.each(files, function(index, file){
+					var fileName = resolveFileName(file.name);
+					$("#filesList").append('<p>' + fileName + '</p>');
+					resolvedFileNames.push(fileName);
+
+					console.log("-------> Adding file: " + fileName);
+				});
+
+				// Enable the buttons
+				$('#uploadRulesBtn').removeClass('disabled');
+				$('#deleteRulesBtn').removeClass('disabled');
+			});
+			
+			
+			//--CUSTOM TRANSFER CHANGES HERE --------------------
+			/**
+			 * Handles onclick event when the user clicks on uploading a set of files.
+			 */
+			$("#uploadRulesBtn").click(function(event){
+				command = 'deploy';
+				triggerUpload(event);
+			});
+			
+			$("#deleteRulesBtn").click(function(event){
+				command = 'delete';
+				triggerUpload(event);
+			});
+			
+			// Function that retrives user-selected files and calls the 
+			// upload function
+			function triggerUpload(eventaction) {
+				// Selected resouce counter
+				// This is also the point where it gets reset to 0
+				var numResourcesChecked = 0;
+				
+				// If there are no files selected, show a warning instead
+				if($("input[name='rulefiles']").prop("files").length == 0 ){
+					$('#uploadMinMessage').show();
+					$('#uploadRulesBtn').addClass('disabled');
+					$('#deleteRulesBtn').addClass('disabled');
+					return;
 				}
-			});
-
-			// If at least one resource server is selected, allow file upload
-			if (numResourcesChecked > 0) {
-				// $('#uploadModal').modal('hide');
 				
-				uploadAndUpdateStatusRule(files[0], 0, files.length);
-				
-				// Reset the text back to the default warning about empty files
-				$('#headerWarning').text("Select at least one file");
-			} else {
-				// Change the warning message to reflect that insufficient resources are selected
-				$('#headerWarning').text("Select at least one Resource");
-				
-				// Prevent the upload button from the default action
-				eventaction.preventDefault();
-				
-				// Show the warning message
-				$('#uploadMinMessage').show();
-				return;
-			}
-		}
+				// Verify that at least one of the resource servers is checked
+				$('#resourceCheckboxes input:checked').each(function() {
+					if ($(this).attr('value')) {
+						numResourcesChecked++;
+					}
+				});
 
-		$(".command-li").click(function() {
-			$("#command-btn").html($(this).html() + ' &nbsp;<span class="caret"></span>');
-			command = $(this).attr("data-command");
-			console.log('user selected: '+ command);
-		});
-
-		$('#resourceCheckboxes li').click(function(e) {
-		    e.stopPropagation();
-		});
-
-		function uploadAndUpdateStatusRule(file, index, totalFiles) {
-		    // get list of hosts to upload to
-		    var host_list = [];
-			$('#resourceCheckboxes input:checked').each(function() {
-			    host_list.push($(this).attr('value'));
-			    console.log("host_list:");
-			    console.log(host_list);
-			});
-
-		    var url = "/emc-metalnx-web/rules/deployNewRule/";
-		    var formData = new FormData();
-		    formData.append('file', file);
-		    formData.append('overwriteTrue', $('#inputOverwriteDuplicateFiles').is(':checked'));
-		    formData.append('command', command);
-		    formData.append('hostList', host_list);
-
-		    $.ajax({
-		        url: url,
-		        type: "POST",
-		        data: formData,
-		        cache: false,
-		        contentType: false,
-		        processData: false,
-		        success: function (res) {
-		            var response = $.parseJSON(res);
-		            var transmit_response = response.transmitResponse;
-		            var error = response.err;
-		            // alert(transmit_response);
-		            
-					transmit_response.forEach(function (element) {
-		            	console.log("Host: " + element.host);
-						console.log("Msg: " + element.msg);
-					});
+				// If at least one resource server is selected, allow file upload
+				if (numResourcesChecked > 0) {
+					// Call the ajax function
+					uploadAndUpdateStatusRule(files[0], 0, files.length);
 					
-		            showTransferCompletedMsg(0, transmit_response);
-		        },
-		    });
-		}
-		</script>
+					resetRulesElements();
+					
+					// Reset the text back to the default warning about empty files
+					$('#headerWarning').text("Select at least one file");
+				} else {
+					// Change the warning message to reflect that insufficient resources are selected
+					$('#headerWarning').text("Select at least one Resource");
+					
+					// Prevent the upload button from the default action
+					eventaction.preventDefault();
+					
+					// Show the warning message
+					$('#uploadMinMessage').show();
+					return;
+				}
+			}
 
+			$('#resourceCheckboxes li').click(function(e) {
+			    e.stopPropagation();
+			});
+
+			function uploadAndUpdateStatusRule(file, index, totalFiles) {
+			    // get list of hosts to upload to
+			    var host_list = [];
+				$('#resourceCheckboxes input:checked').each(function() {
+				    host_list.push($(this).attr('value'));
+				});
+				
+				console.log("host_list:");
+				console.log(host_list);
+
+			    var url = "/emc-metalnx-web/rules/deployNewRule/";
+			    var formData = new FormData();
+			    formData.append('file', file);
+			    formData.append('overwriteTrue', $('#inputOverwriteDuplicateFiles').is(':checked'));
+			    formData.append('command', command);
+			    formData.append('hostList', host_list);
+
+			    $.ajax({
+			        url: url,
+			        type: "POST",
+			        data: formData,
+			        cache: false,
+			        contentType: false,
+			        processData: false,
+			        success: function (res) {
+			            var response = $.parseJSON(res);
+			            var transmit_response = response.transmitResponse;
+			            var error = response.err;
+			            
+						// Append the server responses to the 'well' element
+						transmit_response.forEach(function (element) {
+							$("#serverResponseList").append('<p>' + element.host + '  :  ' + element.msg + '</p>');
+						});
+						
+			            showTransferCompletedMsg(0, transmit_response);
+			        }
+			    });
+			}
+		</script>
     </div> <!-- /. Page Content -->
 </body>
 
