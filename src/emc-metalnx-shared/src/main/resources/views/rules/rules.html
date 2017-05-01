@@ -276,7 +276,23 @@
 			            
 						// Append the server responses to the 'well' element
 						transmit_response.forEach(function (element) {
-							$("#serverResponseList").append('<p>' + element.host + '  :  ' + element.msg + '</p>');
+							// Generate a new date timestamp
+							var recvtimestamp = new Date();
+							var datestring = 'Y-M-d/h:m:s : '
+								.replace('Y', recvtimestamp.getFullYear())
+								.replace('M', recvtimestamp.getMonth()+1)
+								.replace('d', recvtimestamp.getDate())
+								.replace('h', recvtimestamp.getHours())
+								.replace('m', recvtimestamp.getMinutes())
+								.replace('s', recvtimestamp.getSeconds());
+							
+							$("#serverResponseList").append('<p>' 
+								+ datestring
+								+ element.host
+								+ ' (' + resolvedFileNames.toString() + ') '
+								+ '  :  ' 
+								+ element.msg 
+								+ '</p>');
 						});
 						
 			            showTransferCompletedMsg(0, transmit_response);
