@@ -123,6 +123,7 @@
         </div> <!-- /. Main Boostrap row -->
 		
 		<script type="text/javascript" th:inline="javascript">
+			//<![CDATA[
 			$(document).ready(function(){
 				
 				// Add popover on page title
@@ -222,7 +223,7 @@
 				// If at least one resource server is selected, allow file upload
 				if (numResourcesChecked > 0) {
 					// Call the ajax function
-					uploadAndUpdateStatusRule(files[0], 0, files.length, buttonCommand);
+					uploadAndUpdateStatusRule(files, 0, files.length, buttonCommand);
 					
 					resetRulesElements();
 					
@@ -245,60 +246,69 @@
 			    e.stopPropagation();
 			});
 
-			function uploadAndUpdateStatusRule(file, index, totalFiles, command) {
+			function uploadAndUpdateStatusRule(fileArray, index, totalFiles, command) {
 			    // get list of hosts to upload to
 			    var host_list = [];
 				$('#resourceCheckboxes input:checked').each(function() {
 				    host_list.push($(this).attr('value'));
 				});
 				
-				console.log("host_list:");
-				console.log(host_list);
+				var url = "/emc-metalnx-web/rules/deployNewRule/";
+				
+				for (var idx = 0; idx < fileArray.length; idx++) {
+					var formData = new FormData();
+					formData.append('file', fileArray[idx]);
+					formData.append('overwriteTrue', $('#inputOverwriteDuplicateFiles').is(':checked'));
+					formData.append('command', command);
+					formData.append('hostList', host_list);
+					
+					$.ajax({
+						url: url,
+						type: "POST",
+						data: formData,
+						cache: false,
+						contentType: false,
+						processData: false,
+						success: function (res) {
+							var response = $.parseJSON(res);
+							var transmit_response = response.transmitResponse;
+							var error = response.err;
 
-			    var url = "/emc-metalnx-web/rules/deployNewRule/";
-			    var formData = new FormData();
-			    formData.append('file', file);
-			    formData.append('overwriteTrue', $('#inputOverwriteDuplicateFiles').is(':checked'));
-			    formData.append('command', command);
-			    formData.append('hostList', host_list);
-
-			    $.ajax({
-			        url: url,
-			        type: "POST",
-			        data: formData,
-			        cache: false,
-			        contentType: false,
-			        processData: false,
-			        success: function (res) {
-			            var response = $.parseJSON(res);
-			            var transmit_response = response.transmitResponse;
-			            var error = response.err;
-			            
-						// Append the server responses to the 'well' element
-						transmit_response.forEach(function (element) {
-							// Generate a new date timestamp
-							var recvtimestamp = new Date();
-							var datestring = 'Y-M-d/h:m:s : '
-								.replace('Y', recvtimestamp.getFullYear())
-								.replace('M', recvtimestamp.getMonth()+1)
-								.replace('d', recvtimestamp.getDate())
-								.replace('h', recvtimestamp.getHours())
-								.replace('m', recvtimestamp.getMinutes())
-								.replace('s', recvtimestamp.getSeconds());
-							
-							$("#serverResponseList").append('<p>' 
-								+ datestring
-								+ element.host
-								+ ' (' + resolvedFileNames.toString() + ') '
-								+ '  :  ' 
-								+ element.msg 
+							if (error) {
+								$("#serverResponseList").append('<p>' 
+								+ error
 								+ '</p>');
-						});
-						
-			            showTransferCompletedMsg(0, transmit_response);
-			        }
-			    });
+								
+							} else {
+								
+								// Append the server responses to the 'well' element
+								transmit_response.forEach(function (element) {
+									// Generate a new date timestamp
+									var recvtimestamp = new Date();
+									var datestring = 'Y/M/d-h:m:s - '
+										.replace('Y', recvtimestamp.getFullYear())
+										.replace('M', recvtimestamp.getMonth()+1)
+										.replace('d', recvtimestamp.getDate())
+										.replace('h', recvtimestamp.getHours())
+										.replace('m', recvtimestamp.getMinutes())
+										.replace('s', recvtimestamp.getSeconds());
+									
+									$("#serverResponseList").append('<p>' 
+									+ datestring
+									+ element.host
+									+ ' (' + response.filename + ') '
+									+ '  :  ' 
+									+ element.msg 
+									+ '</p>');
+								});
+							}
+							
+							showTransferCompletedMsg(0, transmit_response);
+						}
+					});
+				}
 			}
+			//]]>
 		</script>
     </div> <!-- /. Page Content -->
 </body>
